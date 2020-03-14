@@ -9,9 +9,9 @@ extern void write_port(unsigned short port, unsigned short data);
 
 void init_interrupts(void);
 
-typedef void (*handlerFn)(void);
+typedef void (*keyboardHandlerFn)(char c);
 
-void register_handler(handlerFn handler);
-void unregister_handler(handlerFn handler);
+void register_handler(keyboardHandlerFn handler);
+void unregister_handler(keyboardHandlerFn handler);
 
 #endif

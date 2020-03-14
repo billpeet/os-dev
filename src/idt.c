@@ -10,7 +10,7 @@
 #ifdef __GNUC__
 #define INTERRUPT __attribute__((interrupt))
 #else
-#define INTERRUPT ;
+#define INTERRUPT
 #endif
 
 extern void load_idt(unsigned long *idt_ptr);
@@ -60,13 +60,10 @@ void handler_complete()
 
 INTERRUPT void timer_handler(struct interrupt_frame *frame)
 {
-    write_port(0x20, 0x20);
-    // writeString("x");
-    // handler_complete();
-    // asm("iret");
+    handler_complete();
 }
 
-handlerFn keyboardHandler;
+keyboardHandlerFn keyboardHandler;
 
 INTERRUPT void keyboard_handler(struct interrupt_frame *frame)
 {
@@ -75,20 +72,22 @@ INTERRUPT void keyboard_handler(struct interrupt_frame *frame)
     unsigned char status = read_port(KEYBOARD_STATUS_PORT);
     if (status & 0x01)
     {
-        if (keyboardHandler)
-            keyboardHandler();
 
         char keycode = read_port(KEYBOARD_DATA_PORT);
         if (keycode < 0)
             return;
 
-        if (keycode == ENTER_KEY_CODE)
-        {
-            writeChar('\n');
-            return;
-        }
+        char c;
 
-        writeChar(keyboard_map[(unsigned char)keycode]);
+        if (keycode == ENTER_KEY_CODE)
+            c = '\n';
+        else
+            c = keyboard_map[(unsigned char)keycode];
+
+        if (keyboardHandler)
+            keyboardHandler(c);
+        else
+            writeChar(c);
     }
 }
 
@@ -106,12 +105,12 @@ INTERRUPT void double_fault_handler(struct interrupt_frame *frame, unsigned int 
     asm("hlt");
 }
 
-void register_handler(handlerFn handler)
+void register_handler(keyboardHandlerFn handler)
 {
     keyboardHandler = handler;
 }
 
-void unregister_handler(handlerFn handler)
+void unregister_handler(keyboardHandlerFn handler)
 {
     keyboardHandler = 0;
 }

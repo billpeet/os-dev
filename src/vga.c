@@ -1,7 +1,5 @@
 #include "vga.h"
 
-#define VGA_WIDTH 80
-#define VGA_HEIGHT 25
 #define VGA_MAX VGA_WIDTH *VGA_HEIGHT
 
 int current_pos = 0;
@@ -33,25 +31,34 @@ void writeStringAtPos(const char *str, int line, int pos)
     }
 }
 
-void writeString(const char *str)
-{
-    for (int i = 0; str[i] != '\0'; i++)
-    {
-        if (str[i] == '\n')
-        {
-            current_pos = VGA_WIDTH * (current_pos / VGA_WIDTH) + VGA_WIDTH;
-        }
-        else
-        {
-            setCharAtPos(str[i], current_pos++);
-        }
-    }
-}
-
 void writeChar(char c)
 {
     if (c == '\n')
         current_pos = VGA_WIDTH * (current_pos / VGA_WIDTH) + VGA_WIDTH;
+    else if (c == '\b')
+    {
+        setCharAtPos(' ', --current_pos);
+    }
     else
         setCharAtPos(c, current_pos++);
+}
+
+void writeString(const char *str)
+{
+    for (int i = 0; str[i] != '\0'; i++)
+    {
+        writeChar(str[i]);
+        // if (str[i] == '\n')
+        // {
+        //     current_pos = VGA_WIDTH * (current_pos / VGA_WIDTH) + VGA_WIDTH;
+        // }
+        // else if (str[i] == '\b')
+        // {
+        //     setCharAtPos(--current_pos, ' ');
+        // }
+        // else
+        // {
+        //     setCharAtPos(str[i], current_pos++);
+        // }
+    }
 }
