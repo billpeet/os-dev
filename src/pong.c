@@ -3,18 +3,20 @@
 
 int isRunning;
 
-void handle()
+void handle(char c)
 {
-    unregister_handler(&handle);
     writeString("handled!\n");
+    unregister_handler(&handle);
     isRunning = 0;
 }
 
 void pong()
 {
+    writeString("starting pong...\n");
     isRunning = 1;
     register_handler(&handle);
     while (isRunning)
     {
+        //writeString("x");
     };
 }

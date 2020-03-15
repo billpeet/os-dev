@@ -105,6 +105,14 @@ INTERRUPT void double_fault_handler(struct interrupt_frame *frame, unsigned int 
     asm("hlt");
 }
 
+INTERRUPT void page_fault_handler(struct interrupt_frame *frame, unsigned int error_code)
+{
+    writeString("Page fault!\n");
+    writeString("Error code ");
+    writeChar(error_code + 48);
+    writeString("\n");
+}
+
 void register_handler(keyboardHandlerFn handler)
 {
     keyboardHandler = handler;
@@ -130,6 +138,7 @@ void init_interrupts()
 
     setup_idt_entry(&IDT[0x03], (unsigned long)breakpoint_handler, INTERRUPT_GATE);   // Breakpoint exception
     setup_idt_entry(&IDT[0x08], (unsigned long)double_fault_handler, INTERRUPT_GATE); // Double fault exception
+    setup_idt_entry(&IDT[0x0E], (unsigned long)page_fault_handler, INTERRUPT_GATE);   // Page fault exception
     setup_idt_entry(&IDT[0x20], (unsigned long)timer_handler, INTERRUPT_GATE);        // Timer interrupt
     setup_idt_entry(&IDT[0x21], (unsigned long)keyboard_handler, INTERRUPT_GATE);     // Keyboard interrupt
 

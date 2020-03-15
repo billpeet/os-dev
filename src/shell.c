@@ -1,9 +1,15 @@
 #include "shell.h"
 #include "idt.h"
 #include "vga.h"
+#include "pong.h"
+#include "alloc.h"
+#include "string.h"
+#include "memory.h"
 
 char str[100];
 int pos;
+
+void shell_char(char c);
 
 int starts_with(char *input, char const *check)
 {
@@ -21,7 +27,7 @@ void shell_line_init()
     writeString("> ");
     for (int i = 0; i < 100; i++)
     {
-        str[i] = ' ';
+        str[i] = '\0';
     }
     pos = 0;
 }
@@ -30,11 +36,56 @@ void shell_execute()
 {
     writeChar('\n');
     if (starts_with(str, "pong"))
-        writeString("you wanna play pong!\n");
+    {
+        writeString("Starting pong:\n");
+        pong();
+        writeString("done with pong\n");
+        register_handler(shell_char);
+    }
+    else if (starts_with(str, "clear"))
+    {
+        clearScreen();
+    }
+    else if (starts_with(str, "mem"))
+    {
+        int *ptr = (int *)0xFFFFF;
+        *ptr = 100;
+        writeInt(*ptr);
+        writeChar('\n');
+        unsigned int *pd = (unsigned int *)0xFFFFF000;
+        unsigned int pd_a = *pd;
+        void *phys_ptr = get_physaddr(ptr);
+        writeInt((int)phys_ptr);
+        writeChar('\n');
+    }
+    else if (starts_with(str, "breakpoint"))
+    {
+        writeString("Triggering breakpoint exception:\n");
+        asm("int3");
+    }
+    else if (starts_with(str, "page fault"))
+    {
+        writeString("Triggering page fault exception:\n");
+        int *ptr = (int *)0xdeadbeef;
+        *ptr = 1;
+    }
+    else if (starts_with(str, "alloc"))
+    {
+        writeString("Testing alloc:\n");
+        int *ptr = malloc(sizeof(int));
+        *ptr = 1;
+        writeString("Address: ");
+        writeInt((unsigned int)ptr);
+        writeString(", value: ");
+        writeInt(*ptr);
+        writeChar('\n');
+    }
     else
     {
         writeString("Unrecognised command '");
-        writeString(str);
+        char c;
+        for (int i = 0; c = str[i] != '\0'; i++)
+            writeChar(str[i]);
         writeString("'\n");
     }
     shell_line_init();
@@ -46,7 +97,7 @@ void shell_char(char c)
     {
         if (pos > 0)
         {
-            str[--pos] = ' ';
+            str[--pos] = '\0';
             writeChar(c);
         }
     }

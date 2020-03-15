@@ -2,6 +2,7 @@
 #include "idt.h"
 #include "pong.h"
 #include "shell.h"
+#include "memory.h"
 
 void hlt()
 {
@@ -13,6 +14,9 @@ void kmain(void)
     clearScreen();
     writeString("Welcome to PeetOS\n");
     init_interrupts();
+    init_paging();
+
+    // pong();
 
     // asm("int3");
 
@@ -25,4 +29,6 @@ void kmain(void)
     // int f = j / i;
 
     shell();
+    // while (1)
+    //     ;
 }

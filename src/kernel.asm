@@ -7,19 +7,13 @@ section .text
     dd - (0x1BADB002 + 0x00); checksum - m+f+c should be 0
 
 global start
-global asm_double_fault_handler
-global asm_breakpoint_handler
-global asm_keyboard_handler
-global asm_timer_handler
 global read_port
 global write_port
 global load_idt
+global load_page_directory
+global enable_paging
 
 extern kmain                ; kmain is in the C file
-extern double_fault_handler
-extern breakpoint_handler
-extern keyboard_handler
-extern timer_handler
 
 read_port:
     mov edx, [esp + 4]      ; move top of stack into dx
@@ -38,17 +32,24 @@ load_idt:
     sti                     ; turn on interrupts
     ret
 
-asm_double_fault_handler:
-    call double_fault_handler
-    hlt
+load_page_directory:
+    ; push ebp
+    ; mov ebp, esp
+    mov eax, [esp + 4]      ; grab first parameter into edx
+    mov cr3, eax            ; set IDT location
+    ; mov esp, ebp
+    ; pop ebp
+    ret
 
-asm_breakpoint_handler:
-    call breakpoint_handler
-    iretd
-
-asm_keyboard_handler:
-    call keyboard_handler
-    iretd
+enable_paging:
+    push ebp
+    mov ebp, esp
+    mov eax, cr0            ; set IDT location
+    or eax, $80000000       ; enable paging (32nd bit)
+    mov cr0, eax
+    mov esp, ebp
+    pop ebp
+    ret
 
 start:
     cli                     ; block all interrupts

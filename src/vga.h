@@ -10,5 +10,6 @@ void clearScreen();
 
 void writeString(const char *str);
 void writeChar(char c);
+void writeInt(int i);
 
 #endif

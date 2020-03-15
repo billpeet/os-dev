@@ -1,4 +1,5 @@
 #include "vga.h"
+#include "string.h"
 
 #define VGA_MAX VGA_WIDTH *VGA_HEIGHT
 
@@ -20,6 +21,25 @@ void clearScreen()
 {
     for (int i = 0; i < VGA_MAX; i++)
         setCharAtPos(' ', i);
+    current_pos = 0;
+}
+
+void moveUp()
+{
+    char *vidptr = (char *)0xb8000;
+    for (int i = 1; i < VGA_HEIGHT; i++)
+    {
+        for (int j = 0; j < VGA_WIDTH; j++)
+        {
+            int prevPos = ((i - 1) * VGA_WIDTH) + j;
+            int pos = (i * VGA_WIDTH) + j;
+            vidptr[prevPos * 2] = vidptr[pos * 2];
+            vidptr[prevPos * 2 + 1] = vidptr[pos * 2 + 1];
+
+            setChar(' ', i, j); // Clear last line
+        }
+    }
+    current_pos -= VGA_WIDTH;
 }
 
 void writeStringAtPos(const char *str, int line, int pos)
@@ -34,13 +54,48 @@ void writeStringAtPos(const char *str, int line, int pos)
 void writeChar(char c)
 {
     if (c == '\n')
+    {
         current_pos = VGA_WIDTH * (current_pos / VGA_WIDTH) + VGA_WIDTH;
+        if (current_pos >= VGA_MAX)
+            moveUp();
+    }
     else if (c == '\b')
     {
         setCharAtPos(' ', --current_pos);
     }
     else
+    {
+        if (current_pos >= VGA_MAX)
+            moveUp();
         setCharAtPos(c, current_pos++);
+    }
+}
+
+void writeInt(int i)
+{
+    if (i < 0)
+    {
+        writeChar('-');
+        i *= -1;
+    }
+    if (i < 10)
+        writeChar(i + 48);
+    else
+    {
+        char str[100];
+
+        int j = 0;
+        while (i > 0)
+        {
+            str[j] = (i % 10) + 48;
+            i /= 10;
+            j++;
+        }
+        str[j] = '\0';
+        strrev(str);
+        for (int i = 0; str[i] != '\0'; i++)
+            writeChar(str[i]);
+    }
 }
 
 void writeString(const char *str)
@@ -48,17 +103,5 @@ void writeString(const char *str)
     for (int i = 0; str[i] != '\0'; i++)
     {
         writeChar(str[i]);
-        // if (str[i] == '\n')
-        // {
-        //     current_pos = VGA_WIDTH * (current_pos / VGA_WIDTH) + VGA_WIDTH;
-        // }
-        // else if (str[i] == '\b')
-        // {
-        //     setCharAtPos(--current_pos, ' ');
-        // }
-        // else
-        // {
-        //     setCharAtPos(str[i], current_pos++);
-        // }
     }
 }

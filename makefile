@@ -1,9 +1,10 @@
-ASM=wsl nasm
-CC=wsl gcc
-CFLAGS=-fno-stack-protector -mgeneral-regs-only
-LD=wsl ld
+ASM=nasm
+CC=gcc
+CFLAGS=-fno-stack-protector -mgeneral-regs-only -nostdlib -nodefaultlibs
+LD=ld
 SRCDIR=src
 OBJDIR=obj
+OBJ=$(OBJDIR)/kernel.o $(OBJDIR)/vga.o $(OBJDIR)/idt.o $(OBJDIR)/pong.o $(OBJDIR)/shell.o $(OBJDIR)/alloc.o $(OBJDIR)/string.o $(OBJDIR)/memory.o
 
 all: kernel
 
@@ -13,23 +14,11 @@ run: kernel
 clean:
 	rm -f $(OBJDIR)/* kernel
 
-kernel: $(OBJDIR)/kasm.o $(OBJDIR)/kc.o $(OBJDIR)/vga.o $(OBJDIR)/idt.o $(OBJDIR)/pong.o $(OBJDIR)/shell.o
-	$(LD) -m elf_i386 -T link.ld -o kernel $(OBJDIR)/kasm.o $(OBJDIR)/kc.o $(OBJDIR)/vga.o $(OBJDIR)/idt.o $(OBJDIR)/pong.o $(OBJDIR)/shell.o
+kernel: $(OBJDIR)/kasm.o $(OBJ)
+	$(LD) -m elf_i386 -T link.ld -o kernel $(OBJDIR)/kasm.o $(OBJ)
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	$(CC) -m32 -c $< -o $@ $(CFLAGS)
 
 $(OBJDIR)/kasm.o: $(SRCDIR)/kernel.asm
 	$(ASM) -f elf32 $(SRCDIR)/kernel.asm -o $@
-
-$(OBJDIR)/kc.o: $(SRCDIR)/kernel.c $(SRCDIR)/vga.h
-	$(CC) -m32 -c $(SRCDIR)/kernel.c -o $@ $(CFLAGS)
-
-$(OBJDIR)/vga.o: $(SRCDIR)/vga.c $(SRCDIR)/vga.h
-	$(CC) -m32 -c $(SRCDIR)/vga.c -o $@ $(CFLAGS)
-
-$(OBJDIR)/idt.o: $(SRCDIR)/idt.c $(SRCDIR)/idt.h
-	$(CC) -m32 -c $(SRCDIR)/idt.c -o $@ $(CFLAGS)
-
-$(OBJDIR)/shell.o: $(SRCDIR)/shell.c $(SRCDIR)/shell.h
-	$(CC) -m32 -c $(SRCDIR)/shell.c -o $@ $(CFLAGS)
-
-$(OBJDIR)/pong.o: $(SRCDIR)/pong.c $(SRCDIR)/pong.h
-	$(CC) -m32 -c $(SRCDIR)/pong.c -o $@ $(CFLAGS)
