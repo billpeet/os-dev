@@ -1,36 +1,34 @@
 bits 32                     ; nasm directive - 32 bit
-section .text
+section .multiboot_header
+header_start:
     ;multiboot spec
-    align 4
-    dd 0x1BADB002           ; magic number
+    dd 0xe85250d6           ; magic number
     dd 0x00                 ; flags
-    dd - (0x1BADB002 + 0x00); checksum - m+f+c should be 0
+    dd header_end - header_start ; header length
+    dd 0x100000000 - (0xe85250d6 + header_end - header_start); checksum - m+f+c should be 0
+
+    dw 0
+    dw 0
+    dd 8
+header_end:
+
+section .text
 
 global start
 global read_port
 global write_port
-global load_idt
 global load_page_directory
 global enable_paging
+global code_selector
 
-extern kmain                ; kmain is in the C file
-
-read_port:
-    mov edx, [esp + 4]      ; move top of stack into dx
-    in al, dx               ; ret port at dx into al (return address)
-    ret
-
-write_port:
-    mov edx, [esp + 4]      ; move top of stack into dx
-    mov al, [esp + 4 + 4]   ; move second param into al
-    out dx, al              ; move value in al into port at dx
-    ret
-
-load_idt:
-    mov edx, [esp + 4]      ; grab first parameter into edx
-    lidt [edx]              ; set IDT location
-    sti                     ; turn on interrupts
-    ret
+extern long_mode_start
+extern long_start
+extern error
+extern init_page_tables
+extern p4_table
+extern p3_table
+extern p2_table
+extern tester
 
 load_page_directory:
     ; push ebp
@@ -41,22 +39,136 @@ load_page_directory:
     ; pop ebp
     ret
 
-enable_paging:
-    push ebp
-    mov ebp, esp
-    mov eax, cr0            ; set IDT location
-    or eax, $80000000       ; enable paging (32nd bit)
-    mov cr0, eax
-    mov esp, ebp
-    pop ebp
+check_multiboot:            ; Checks if was loaded by a Multiboot compliant bootloader
+    cmp eax, 0x36d76289     ; Check that magic number 0x36d76289 is loaded into eax
+    jne .no_multiboot
     ret
+.no_multiboot:
+    mov al, "0"
+    jmp error
+
+check_cpuid:                ; Checks that CPUID is supported by attempting to flip ID bit (21) in FLAGS
+    pushfd                  ; Copy FLAGS into eax
+    pop eax
+
+    mov ecx, eax            ; Save to ecx for later
+
+    xor eax, 1 << 21        ; Flip ID bit
+
+    push eax                ; Poke back into FLAGS
+    popfd
+
+    pushfd                  ; Grab current result from FLAGS
+    pop eax
+
+    push ecx                ; Restore FLAGS from old version in ecx
+    popfd
+
+    cmp eax, ecx            ; Check that the bit was flipped - if not, CPUID isn't supported
+    je .no_cpuid
+    ret
+.no_cpuid:
+    mov eax, 1
+    push eax
+    call error
+
+check_long_mode:            ; Check if long mode is available
+    ; Check if extended processor info is available
+    mov eax, 0x80000000     ; 
+    cpuid                   ; Returns highest supported argument
+    cmp eax, 0x8000001      ; Highest support argument needs to be at least 0x80000001
+    jb .no_long_mode
+
+    ; Check if long mode is available
+    mov eax, 0x80000001     ; Argument for extended processor info
+    cpuid
+    test edx, 1 << 29       ; Test if LM-bit is test in the D-register (30th bit)
+    jz .no_long_mode
+    ret
+.no_long_mode:
+    mov eax, 2
+    push eax
+    call error
+
+enable_paging:
+    mov eax, p4_table
+    mov cr3, eax
+
+    mov eax, cr4
+    or eax, 1 << 5
+    mov cr4, eax
+
+    mov ecx, 0xC0000080
+    rdmsr
+    or eax, 1 << 8
+    wrmsr
+
+    mov eax, cr0
+    or eax, 1 << 31
+    mov cr0, eax
+
+    ret
+
+set_up_page_tables:
+    ; map first P4 entry to P3 table
+    mov eax, p3_table
+    or eax, 0b11 ; present + writable
+    mov [p4_table], eax
+
+    ; map first P3 entry to P2 table
+    mov eax, p2_table
+    or eax, 0b11 ; present + writable
+    mov [p3_table], eax
+
+    ; map each P2 entry to a huge 2MiB page
+    mov ecx, 0         ; counter variable
+
+.map_p2_table:
+    ; map ecx-th P2 entry to a huge page that starts at address 2MiB*ecx
+    mov eax, 0x200000  ; 2MiB
+    mul ecx            ; start address of ecx-th page
+    or eax, 0b10000011 ; present + writable + huge
+    mov [p2_table + ecx * 8], eax ; map ecx-th entry
+
+    inc ecx            ; increase counter
+    cmp ecx, 512       ; if counter == 512, the whole P2 table is mapped
+    jne .map_p2_table  ; else map the next entry
+
+    ret
+
 
 start:
     cli                     ; block all interrupts
-    mov esp, stack_space    ; set stack pointer
-    call kmain
-    hlt                     ; halt
+    mov esp, stack_top      ; set stack pointer
+    mov edi, ebx
+
+    ; mov eax, 0
+    ; push eax
+    ; push eax
+    ; call error
+
+    call check_multiboot
+    call check_cpuid
+    call check_long_mode
+    call init_page_tables
+    call set_up_page_tables
+    call enable_paging
+    call tester
+    lgdt [gdt64.pointer]
+
+    jmp code_selector:long_mode_start ; jump to 64-bit code
+    hlt                               ; halt
+
+section .rodata
+gdt64:
+    dq 0
+code_selector: equ $ - gdt64
+    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; code segment
+.pointer:
+    dw $ - gdt64 - 1
+    dq gdt64
 
 section .bss
+stack_bottom:
 resb 8192                   ; 8KB for stack
-stack_space:
+stack_top:

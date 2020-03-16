@@ -1,5 +1,6 @@
 #include "vga.h"
 #include "string.h"
+#include "types.h"
 
 #define VGA_MAX VGA_WIDTH *VGA_HEIGHT
 

@@ -1,6 +1,6 @@
 #include "alloc.h"
 
-unsigned int current = 0x0;
+unsigned long current = 0x0;
 
 void *malloc(unsigned int size)
 {

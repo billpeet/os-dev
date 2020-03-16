@@ -5,6 +5,7 @@
 #include "alloc.h"
 #include "string.h"
 #include "memory.h"
+#include "kernel.h"
 
 char str[100];
 int pos;
@@ -48,14 +49,14 @@ void shell_execute()
     }
     else if (starts_with(str, "mem"))
     {
-        int *ptr = (int *)0xFFFFF;
+        long *ptr = (long *)0xFFFFF;
         *ptr = 100;
         writeInt(*ptr);
         writeChar('\n');
-        unsigned int *pd = (unsigned int *)0xFFFFF000;
+        unsigned long *pd = (unsigned long *)0xFFFFF000;
         unsigned int pd_a = *pd;
         void *phys_ptr = get_physaddr(ptr);
-        writeInt((int)phys_ptr);
+        writeInt((long)phys_ptr);
         writeChar('\n');
     }
     else if (starts_with(str, "breakpoint"))
@@ -69,13 +70,24 @@ void shell_execute()
         int *ptr = (int *)0xdeadbeef;
         *ptr = 1;
     }
+    else if (starts_with(str, "divide by zero"))
+    {
+        writeString("Triggering divide by zero exception:\n");
+        int i = 0;
+        i /= 0;
+    }
+    else if (starts_with(str, "reboot"))
+    {
+        writeString("Rebooting...\n");
+        reboot();
+    }
     else if (starts_with(str, "alloc"))
     {
         writeString("Testing alloc:\n");
         int *ptr = malloc(sizeof(int));
         *ptr = 1;
         writeString("Address: ");
-        writeInt((unsigned int)ptr);
+        writeInt((unsigned long)ptr);
         writeString(", value: ");
         writeInt(*ptr);
         writeChar('\n');

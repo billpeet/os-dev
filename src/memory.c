@@ -28,8 +28,8 @@ void init_paging()
         init_page_entry(&first_page_table[i], i, 0b11);
     }
 
-    page_directory[0] = ((unsigned int)first_page_table) | 0b11;
-    page_directory[PAGE_SIZE - 1] = ((unsigned int)page_directory) | 0b11;
+    page_directory[0] = ((unsigned long)first_page_table) | 0b11;
+    page_directory[PAGE_SIZE - 1] = ((unsigned long)page_directory) | 0b11;
 
     load_page_directory(page_directory);
     enable_paging();

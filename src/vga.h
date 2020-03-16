@@ -1,6 +1,8 @@
 #ifndef VGA_H
 #define VGA_H
 
+#include "types.h"
+
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
 

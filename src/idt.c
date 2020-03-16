@@ -13,20 +13,29 @@
 #define INTERRUPT
 #endif
 
-extern void load_idt(unsigned long *idt_ptr);
+struct idt_pointer
+{
+    u16 limit;
+    u64 base;
+} __attribute((packed));
+
+extern void load_idt(void);
+extern void *code_selector;
 
 struct interrupt_frame;
 
 struct IDT_entry
 {
-    unsigned short int offset_lowerbits;
-    unsigned short int selector;
-    unsigned char zero;
-    unsigned char type_attr;
-    unsigned short int offset_higherbits;
-};
+    u16 offset_lowerbits;
+    u16 selector;
+    u16 options;
+    u16 offset_middlebits;
+    u32 offset_higherbits;
+    u32 reserved;
+} __attribute((packed));
 
-struct IDT_entry IDT[IDT_SIZE];
+// struct IDT_entry IDT[IDT_SIZE] __attribute((aligned(4)));
+extern struct IDT_entry idt[IDT_SIZE];
 
 void init_pic()
 {
@@ -69,11 +78,13 @@ INTERRUPT void keyboard_handler(struct interrupt_frame *frame)
 {
     handler_complete();
 
-    unsigned char status = read_port(KEYBOARD_STATUS_PORT);
+    u8 status = read_port(KEYBOARD_STATUS_PORT);
+
     if (status & 0x01)
     {
 
         char keycode = read_port(KEYBOARD_DATA_PORT);
+
         if (keycode < 0)
             return;
 
@@ -96,21 +107,32 @@ INTERRUPT void breakpoint_handler(struct interrupt_frame *frame)
     writeString("Breakpoint!\n");
 }
 
-INTERRUPT void double_fault_handler(struct interrupt_frame *frame, unsigned int error_code)
+INTERRUPT void double_fault_handler(struct interrupt_frame *frame)
 {
     writeString("PANIC: double fault!\n");
-    writeString("Error code ");
-    writeChar(error_code + 48);
     writeString("\nPress any key to continue...\n");
     asm("hlt");
 }
 
-INTERRUPT void page_fault_handler(struct interrupt_frame *frame, unsigned int error_code)
+INTERRUPT void page_fault_handler(struct interrupt_frame *frame, unsigned long error_code)
 {
     writeString("Page fault!\n");
-    writeString("Error code ");
-    writeChar(error_code + 48);
+    if (error_code & 0b1)
+        writeString("Page protection violation\n");
+    else
+        writeString("Non-present page\n");
+    if (error_code & 0b10)
+        writeString("Attempting to write\n");
+    else
+        writeString("Attempting to read\n");
     writeString("\n");
+    // We have to try and fix it, or else just hang
+    asm("hlt");
+}
+
+INTERRUPT void random_handler(struct interrupt_frame *frame)
+{
+    writeString("interrupt!\n");
 }
 
 void register_handler(keyboardHandlerFn handler)
@@ -123,34 +145,33 @@ void unregister_handler(keyboardHandlerFn handler)
     keyboardHandler = 0;
 }
 
-void setup_idt_entry(struct IDT_entry *entry, unsigned long handler_address, unsigned char type_attr)
+void setup_idt_entry(struct IDT_entry *entry, u64 handler_address, u16 options)
 {
     entry->offset_lowerbits = handler_address & 0xffff;
-    entry->selector = KERNEL_CODE_SEGMENT_OFFSET;
-    entry->zero = 0;
-    entry->type_attr = type_attr;
-    entry->offset_higherbits = (handler_address & 0xffff0000) >> 16;
+    entry->selector = 8;
+    entry->options = options;
+    entry->offset_middlebits = (handler_address & 0xffff0000) >> 16;
+    entry->offset_higherbits = (handler_address & 0xffffffff00000000) >> 32;
+    entry->reserved = 0;
 }
 
 void init_interrupts()
 {
     init_pic();
 
-    setup_idt_entry(&IDT[0x03], (unsigned long)breakpoint_handler, INTERRUPT_GATE);   // Breakpoint exception
-    setup_idt_entry(&IDT[0x08], (unsigned long)double_fault_handler, INTERRUPT_GATE); // Double fault exception
-    setup_idt_entry(&IDT[0x0E], (unsigned long)page_fault_handler, INTERRUPT_GATE);   // Page fault exception
-    setup_idt_entry(&IDT[0x20], (unsigned long)timer_handler, INTERRUPT_GATE);        // Timer interrupt
-    setup_idt_entry(&IDT[0x21], (unsigned long)keyboard_handler, INTERRUPT_GATE);     // Keyboard interrupt
+    u16 options_present = 0b1000111000000000; // Present bit set (15)
+    u16 options_trap = 0b1000111100000000;    // Present bit (15) and trap bit (8) set
 
-    // Fill IDT descriptor
-    unsigned long idt_address = (unsigned long)IDT;
-    unsigned long idt_ptr[2];
-    idt_ptr[0] = (sizeof(struct IDT_entry) * IDT_SIZE) + ((idt_address & 0xffff) << 16);
-    idt_ptr[1] = idt_address >> 16;
+    setup_idt_entry(&idt[3], (u64)breakpoint_handler, options_trap);      // Breakpoint exception
+    setup_idt_entry(&idt[8], (u64)double_fault_handler, options_present); // Double fault exception
+    setup_idt_entry(&idt[14], (u64)page_fault_handler, options_present);  // Page fault exception
+    setup_idt_entry(&idt[32], (u64)timer_handler, options_trap);          // Timer interrupt
+    setup_idt_entry(&idt[33], (u64)keyboard_handler, options_present);    // Keyboard interrupt
 
-    load_idt(idt_ptr);
+    setup_idt_entry(&idt[49], (u64)random_handler, options_present);
+    load_idt();
 
-    // Unmask interrupts 0 & 1
+    // // Unmask interrupts 0 & 1
     write_port(0x21, 0b11111100);
     write_port(0xA1, 0b11111111);
 }

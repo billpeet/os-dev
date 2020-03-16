@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "keyboard_map.h": "c",
-        "vga.h": "c"
+        "vga.h": "c",
+        "memory.h": "c"
     }
 }
