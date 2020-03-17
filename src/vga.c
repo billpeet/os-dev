@@ -72,13 +72,18 @@ void writeChar(char c)
     }
 }
 
-void writeInt(int i)
+u8 getHexChar(u8 c)
 {
-    if (i < 0)
-    {
-        writeChar('-');
-        i *= -1;
-    }
+    if (c >= 10)
+        // Letter
+        return c + 87;
+    else
+        // Number
+        return c + 48;
+}
+
+void writeInt(u64 i)
+{
     if (i < 10)
         writeChar(i + 48);
     else
@@ -99,10 +104,48 @@ void writeInt(int i)
     }
 }
 
+void writeHexInt(u64 i)
+{
+    writeString("0x");
+    if (i < 16)
+        writeChar(getHexChar((char)i));
+    else
+    {
+        char str[100];
+
+        int j = 0;
+        while (i > 0)
+        {
+            str[j] = getHexChar((char)(i % 16));
+            i /= 16;
+            j++;
+        }
+        str[j] = '\0';
+        strrev(str);
+        for (int i = 0; str[i] != '\0'; i++)
+            writeChar(str[i]);
+    }
+}
+
+void writeSInt(long i)
+{
+    if (i < 0)
+    {
+        writeChar('-');
+        i *= -1;
+    }
+    writeInt(i);
+}
+
 void writeString(const char *str)
 {
     for (int i = 0; str[i] != '\0'; i++)
     {
         writeChar(str[i]);
     }
+}
+
+void writeNewLine()
+{
+    writeChar('\n');
 }

@@ -2,6 +2,7 @@
     "files.associations": {
         "keyboard_map.h": "c",
         "vga.h": "c",
-        "memory.h": "c"
+        "memory.h": "c",
+        "boot_info.h": "c"
     }
 }

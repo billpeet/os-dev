@@ -12,6 +12,9 @@ void clearScreen();
 
 void writeString(const char *str);
 void writeChar(char c);
-void writeInt(int i);
+void writeInt(unsigned long i);
+void writeHexInt(unsigned long i);
+void writeSInt(long i);
+void writeNewLine();
 
 #endif

@@ -49,15 +49,70 @@ void shell_execute()
     }
     else if (starts_with(str, "mem"))
     {
-        long *ptr = (long *)0xFFFFF;
+        long *ptr = (long *)(0x400000);
         *ptr = 100;
+        writeString("Here's a random mem location: ");
+        writeInt((u64)ptr);
+        writeString(", value ");
         writeInt(*ptr);
-        writeChar('\n');
-        unsigned long *pd = (unsigned long *)0xFFFFF000;
-        unsigned int pd_a = *pd;
-        void *phys_ptr = get_physaddr(ptr);
-        writeInt((long)phys_ptr);
-        writeChar('\n');
+        writeString("\n");
+
+        u64 phys_addr = (u64)get_physaddr(ptr);
+        writeString("Physical addr ");
+        writeInt(phys_addr);
+        writeString("\n");
+
+        // unsigned long *pd = (unsigned long *)0xFFFFF000;
+        // unsigned int pd_a = *pd;
+        // void *phys_ptr = get_physaddr(ptr);
+        // writeInt((long)phys_ptr);
+        // writeChar('\n');
+    }
+    else if (starts_with(str, "newframe"))
+    {
+        allocate_frame();
+        for (u64 i = 0;; i++)
+        {
+            if (allocate_frame() == 0)
+            {
+                writeString("Allocated ");
+                writeInt(i);
+                writeString(" frames\n");
+                break;
+            }
+        }
+        // u64 frame_1 = allocate_frame();
+        // writeString("New frame: ");
+        // writeHexInt((u64)frame_1 * PAGE_SIZE);
+        // writeNewLine();
+        // u64 frame_2 = allocate_frame();
+        // writeString("New frame: ");
+        // writeHexInt((u64)frame_2 * PAGE_SIZE);
+        // writeNewLine();
+        // void *phys_addr = (void *)233495808;
+        // void *virt_addr = (void *)(0x40000);
+        // map_page(phys_addr, virt_addr, 0x80); // Map huge page
+        // int *int_ptr = (int *)virt_addr;
+        // // *int_ptr = 255;
+        // writeString("Here's a random mem location: ");
+        // writeInt((u64)int_ptr);
+        // writeString("\n");
+        // u64 phys_addr_actual = (u64)get_physaddr(int_ptr);
+        // writeString("Physical addr ");
+        // writeInt(phys_addr_actual);
+        // writeString("\nAttempting to access value:");
+        // writeInt(*int_ptr);
+        // writeString("\n");
+    }
+    else if (starts_with(str, "alloc"))
+    {
+        u32 *a = malloc(sizeof(u32));
+        *a = 23;
+        writeString("Allocated a u32 at ");
+        writeInt((u64)a);
+        writeString(", with value ");
+        writeInt(*a);
+        writeString("\n");
     }
     else if (starts_with(str, "breakpoint"))
     {
@@ -74,23 +129,12 @@ void shell_execute()
     {
         writeString("Triggering divide by zero exception:\n");
         int i = 0;
-        i /= 0;
+        i /= i;
     }
     else if (starts_with(str, "reboot"))
     {
         writeString("Rebooting...\n");
         reboot();
-    }
-    else if (starts_with(str, "alloc"))
-    {
-        writeString("Testing alloc:\n");
-        int *ptr = malloc(sizeof(int));
-        *ptr = 1;
-        writeString("Address: ");
-        writeInt((unsigned long)ptr);
-        writeString(", value: ");
-        writeInt(*ptr);
-        writeChar('\n');
     }
     else
     {

@@ -17,27 +17,17 @@ section .text
 global start
 global read_port
 global write_port
-global load_page_directory
-global enable_paging
 global code_selector
 
 extern long_mode_start
 extern long_start
 extern error
-extern init_page_tables
+; extern init_page_tables
 extern p4_table
 extern p3_table
 extern p2_table
 extern tester
 
-load_page_directory:
-    ; push ebp
-    ; mov ebp, esp
-    mov eax, [esp + 4]      ; grab first parameter into edx
-    mov cr3, eax            ; set IDT location
-    ; mov esp, ebp
-    ; pop ebp
-    ret
 
 check_multiboot:            ; Checks if was loaded by a Multiboot compliant bootloader
     cmp eax, 0x36d76289     ; Check that magic number 0x36d76289 is loaded into eax
@@ -115,9 +105,14 @@ set_up_page_tables:
     or eax, 0b11 ; present + writable
     mov [p4_table], eax
 
+    ; recursive page map
+    ; mov eax, p4_table
+    ; or eax, 0b11
+    ; mov [p4_table + 512 * 8], eax
+
     ; map first P3 entry to P2 table
     mov eax, p2_table
-    or eax, 0b11 ; present + writable
+    or eax, 0b11       ; present + writable
     mov [p3_table], eax
 
     ; map each P2 entry to a huge 2MiB page
@@ -128,7 +123,7 @@ set_up_page_tables:
     mov eax, 0x200000  ; 2MiB
     mul ecx            ; start address of ecx-th page
     or eax, 0b10000011 ; present + writable + huge
-    mov [p2_table + ecx * 8], eax ; map ecx-th entry
+    mov [p2_table + ecx*8], eax ; map ecx-th entry
 
     inc ecx            ; increase counter
     cmp ecx, 512       ; if counter == 512, the whole P2 table is mapped
@@ -150,10 +145,9 @@ start:
     call check_multiboot
     call check_cpuid
     call check_long_mode
-    call init_page_tables
+    ; call init_page_tables
     call set_up_page_tables
     call enable_paging
-    call tester
     lgdt [gdt64.pointer]
 
     jmp code_selector:long_mode_start ; jump to 64-bit code
