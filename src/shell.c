@@ -50,9 +50,9 @@ void shell_execute()
     }
     else if (starts_with(str, "newframe"))
     {
-        u64 new_frame = allocate_frame();
+        void *new_frame = allocate_frame();
         writeString("New frame: ");
-        writeHexInt(new_frame);
+        writeHexInt((u64)new_frame);
         writeNewLine();
         // for (u64 i = 0;; i++)
         // {
@@ -64,6 +64,22 @@ void shell_execute()
         //         break;
         //     }
         // }
+    }
+    else if (starts_with(str, "deaframe"))
+    {
+        void *new_frame1 = allocate_frame();
+        void *new_frame2 = allocate_frame();
+        void *new_frame3 = allocate_frame();
+        writeString("New frame: ");
+        writeHexInt((u64)new_frame3);
+        writeString("\nNow deallocating again\n");
+        deallocate_frame(new_frame3);
+        deallocate_frame(new_frame2);
+        deallocate_frame(new_frame1);
+        void *new_new_frame = allocate_frame();
+        writeString("Next frame: ");
+        writeHexInt((u64)new_new_frame);
+        writeNewLine();
     }
     else if (starts_with(str, "paging"))
     {
@@ -95,12 +111,43 @@ void shell_execute()
         u64 ptr = 0x1;
         ptr = 0x40000000; // P4 = 0, P3 = 1, P2 = 0, P1 = 0
         writeString("Mapping new page\n");
-        map_page(0xcafeba00, (void *)ptr, 0b10);
+        map_page(0x5000, (void *)ptr, 0b10);
         writeString("Getting phys addr\n");
         u64 phys_addr = get_physaddr((void *)ptr);
         writeString("Phys_addr:");
         writeHexInt((u64)phys_addr);
         writeNewLine();
+    }
+    else if (starts_with(str, "newhuge"))
+    {
+        u64 ptr = 0x1;
+        ptr = 0x40000000; // P4 = 0, P3 = 1, P2 = 0, P1 = 0
+        writeString("Mapping new page\n");
+        map_page(0x5000, (void *)ptr, 0b10000010); // huge
+        writeString("Getting phys addr\n");
+        u64 phys_addr = get_physaddr((void *)ptr);
+        writeString("Phys_addr:");
+        writeHexInt((u64)phys_addr);
+        writeNewLine();
+    }
+    else if (starts_with(str, "unmap"))
+    {
+        u64 ptr = 0x1;
+        ptr = 0x40000000; // P4 = 0, P3 = 1, P2 = 0, P1 = 0
+        writeString("Mapping new page\n");
+        map_page(0x5000, (void *)ptr, 0b10);
+        writeString("Getting phys addr\n");
+        u64 phys_addr = get_physaddr((void *)ptr);
+        writeString("Phys_addr:");
+        writeHexInt((u64)phys_addr);
+        writeNewLine();
+        int *int_ptr = (int *)ptr;
+        writeString("Here's its value:");
+        writeInt(*int_ptr);
+        unmap_page((void *)ptr);
+        writeString("\nUnampped, now attempting to get physical addr:\n");
+        get_physaddr((void *)ptr);
+        writeInt(*int_ptr);
     }
     else if (starts_with(str, "alloc"))
     {

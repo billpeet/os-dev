@@ -31,7 +31,13 @@ void *get_page_table_entry(page_table_t *page_table, u64 id, u64 *addr, u8 *flag
 
 page_table_t *get_page_table(page_table_t *page_table, u64 id)
 {
-    return (page_table_t *)((page_table->entries[id] >> 8) << 8);
+    u64 entry = page_table->entries[id];
+    if (!(entry & 0b1))
+    {
+        writeString("Page table does not exist!\n");
+        panic(3);
+    }
+    return (page_table_t *)((entry >> 8) << 8);
 }
 
 page_table_t *create_table(page_table_t *parent, u64 index)
@@ -39,8 +45,12 @@ page_table_t *create_table(page_table_t *parent, u64 index)
     if (!(parent->entries[index] & 0b1))
     {
         // Table doesn't exist - create one
-        u64 frame = allocate_frame();          // grab a new frame for the new table
+        u64 frame = (u64)allocate_frame();     // grab a new frame for the new table
         parent->entries[index] = frame | 0b11; // present & writable flags
+
+        writeString("New table at ");
+        writeHexInt(frame);
+        writeNewLine();
 
         // Zero out new table
         page_table_t *new_table = (page_table_t *)frame;
@@ -49,7 +59,7 @@ page_table_t *create_table(page_table_t *parent, u64 index)
             new_table->entries[i] = 0;
         }
     }
-    return (page_table_t *)parent->entries[index];
+    return (page_table_t *)((parent->entries[index] >> 8) << 8);
 }
 
 void translate_address(void *virt_addr, u64 *p4_index, u64 *p3_index, u64 *p2_index, u64 *p1_index, u64 *offset)
@@ -102,6 +112,11 @@ u64 get_physaddr(void *virt_addr)
     u64 addr;
     u8 flags;
     get_page_table_entry(p2, p2_index, &addr, &flags);
+    if (!(flags & 0b1))
+    {
+        writeString("Page entry not present!\n");
+        panic(2);
+    }
     if (flags & 0x80)
     {
         // 4MiB page - return this
@@ -116,6 +131,11 @@ u64 get_physaddr(void *virt_addr)
 
     page_table_t *p1 = (page_table_t *)addr;
     get_page_table_entry(p1, p1_index, &addr, &flags);
+    if (!(flags & 0b1))
+    {
+        writeString("Page entry not present!\n");
+        panic(2);
+    }
     return addr + offset;
 }
 
@@ -148,7 +168,7 @@ void map_page(u64 phys_addr, void *virt_addr, u8 flags)
     }
     else
     {
-        if (phys_addr & 0b111)
+        if (phys_addr & 7)
         {
             writeString("Invalid physical frame - must be 4096 byte aligned!\n");
             panic(2);
@@ -158,13 +178,32 @@ void map_page(u64 phys_addr, void *virt_addr, u8 flags)
         writeInt(p1_index);
         writeString(", to phys addr ");
         writeHexInt(phys_addr);
-        writeString(", setting to ");
-        writeHexInt(phys_addr | flags | 0x01);
         writeNewLine();
 
-        page_table_t *p1 = get_page_table(p2, p2_index);
+        page_table_t *p1 = create_table(p2, p2_index);
         p1->entries[p1_index] = phys_addr | flags | 0x01;
     }
+}
+
+void unmap_page(void *virt_addr)
+{
+    u64 p4_index;
+    u64 p3_index;
+    u64 p2_index;
+    u64 p1_index;
+    u64 offset;
+    translate_address(virt_addr, &p4_index, &p3_index, &p2_index, &p1_index, &offset);
+
+    page_table_t *p4 = level_4_table();
+    page_table_t *p3 = get_page_table(p4, p4_index);
+    page_table_t *p2 = get_page_table(p3, p3_index);
+
+    writeString("Unmapping a standard page at P1 index ");
+    writeInt(p1_index);
+    writeNewLine();
+
+    page_table_t *p1 = get_page_table(p2, p2_index);
+    p1->entries[p1_index] = 0; // reset to 0 (present bit = 0)
 
     flush_tlb();
 }

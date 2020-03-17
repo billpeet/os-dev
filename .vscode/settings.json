@@ -4,6 +4,7 @@
         "vga.h": "c",
         "memory.h": "c",
         "boot_info.h": "c",
-        "frame_allocator.h": "c"
+        "frame_allocator.h": "c",
+        "stdbool.h": "c"
     }
 }

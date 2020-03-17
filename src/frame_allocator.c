@@ -2,9 +2,19 @@
 #include "types.h"
 #include "vga.h"
 #include "boot_info.h"
+#include "kernel.h"
+#include <stdbool.h>
+
+struct frame_header
+{
+    struct frame_header *next;
+};
+
+typedef struct frame_header frame_header_t;
 
 u64 next_free_frame;
 memory_map_entry_t *current_area;
+frame_header_t *free_frames = NULLPTR;
 
 u64 get_frame_containing_address(u64 addr)
 {
@@ -32,10 +42,23 @@ void next_area()
     current_area = (void *)0;
 }
 
-u64 allocate_frame()
+void *allocate_frame()
 {
+    if (free_frames != NULLPTR)
+    {
+        void *free_frame = free_frames;
+        writeString("Spare frame at ");
+        writeHexInt((u64)free_frame);
+        writeNewLine();
+        free_frames = free_frames->next;
+        return free_frame;
+    }
+
     if ((u64)current_area == 0)
-        return 0;
+    {
+        writeString("Out of memory!\n");
+        panic(3);
+    }
 
     u64 current_area_last_frame = get_frame_containing_address(current_area->base_addr + current_area->length - 1);
     if (next_free_frame > current_area_last_frame)
@@ -55,12 +78,22 @@ u64 allocate_frame()
     }
     else
     {
-        return PAGE_SIZE * next_free_frame++;
+        return (void *)(PAGE_SIZE * next_free_frame++);
     }
+}
+
+void deallocate_frame(void *frame)
+{
+    frame_header_t *header = (frame_header_t *)frame;
+    header->next = NULLPTR;
+    if (free_frames != NULLPTR)
+        free_frames->next = header;
+
+    free_frames = header;
 }
 
 void init_frame_allocator()
 {
-    next_free_frame = 0;
+    next_free_frame = 1; // skip first frame - it makes detecting null pointers too hard :D
     next_area();
 }

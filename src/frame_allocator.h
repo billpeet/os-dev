@@ -5,8 +5,11 @@
 
 #define PAGE_SIZE 4096
 
-void init_paging();
-u64 allocate_frame();
+#define NULLPTR (void *)0
+
 void init_frame_allocator();
+
+void *allocate_frame();
+void deallocate_frame(void *frame);
 
 #endif
