@@ -4,7 +4,8 @@
 #include "pong.h"
 #include "alloc.h"
 #include "string.h"
-#include "memory.h"
+#include "frame_allocator.h"
+#include "paging.h"
 #include "kernel.h"
 
 char str[100];
@@ -47,62 +48,59 @@ void shell_execute()
     {
         clearScreen();
     }
-    else if (starts_with(str, "mem"))
-    {
-        long *ptr = (long *)(0x400000);
-        *ptr = 100;
-        writeString("Here's a random mem location: ");
-        writeInt((u64)ptr);
-        writeString(", value ");
-        writeInt(*ptr);
-        writeString("\n");
-
-        u64 phys_addr = (u64)get_physaddr(ptr);
-        writeString("Physical addr ");
-        writeInt(phys_addr);
-        writeString("\n");
-
-        // unsigned long *pd = (unsigned long *)0xFFFFF000;
-        // unsigned int pd_a = *pd;
-        // void *phys_ptr = get_physaddr(ptr);
-        // writeInt((long)phys_ptr);
-        // writeChar('\n');
-    }
     else if (starts_with(str, "newframe"))
     {
-        allocate_frame();
-        for (u64 i = 0;; i++)
-        {
-            if (allocate_frame() == 0)
-            {
-                writeString("Allocated ");
-                writeInt(i);
-                writeString(" frames\n");
-                break;
-            }
-        }
-        // u64 frame_1 = allocate_frame();
-        // writeString("New frame: ");
-        // writeHexInt((u64)frame_1 * PAGE_SIZE);
-        // writeNewLine();
-        // u64 frame_2 = allocate_frame();
-        // writeString("New frame: ");
-        // writeHexInt((u64)frame_2 * PAGE_SIZE);
-        // writeNewLine();
-        // void *phys_addr = (void *)233495808;
-        // void *virt_addr = (void *)(0x40000);
-        // map_page(phys_addr, virt_addr, 0x80); // Map huge page
-        // int *int_ptr = (int *)virt_addr;
-        // // *int_ptr = 255;
-        // writeString("Here's a random mem location: ");
-        // writeInt((u64)int_ptr);
-        // writeString("\n");
-        // u64 phys_addr_actual = (u64)get_physaddr(int_ptr);
-        // writeString("Physical addr ");
-        // writeInt(phys_addr_actual);
-        // writeString("\nAttempting to access value:");
-        // writeInt(*int_ptr);
-        // writeString("\n");
+        u64 new_frame = allocate_frame();
+        writeString("New frame: ");
+        writeHexInt(new_frame);
+        writeNewLine();
+        // for (u64 i = 0;; i++)
+        // {
+        //     if (allocate_frame() == 0 && i != 0)
+        //     {
+        //         writeString("Allocated ");
+        //         writeInt(i);
+        //         writeString(" frames\n");
+        //         break;
+        //     }
+        // }
+    }
+    else if (starts_with(str, "paging"))
+    {
+        u64 ptr = 0x00000fffffeee010;
+        ptr = 0x20003;
+        u64 phys_addr = get_physaddr((void *)ptr);
+        writeString("Phys_addr:");
+        writeHexInt((u64)phys_addr);
+        writeNewLine();
+    }
+    else if (starts_with(str, "recursive"))
+    {
+        u64 l4_table_addr = (u64)level_4_table();
+        page_table_t *p4 = (page_table_t *)0xfffffffffffff000;
+        u64 phys_addr = get_physaddr(p4);
+        writeString("P4 table:");
+        writeHexInt((u64)p4);
+        writeString(", phys_addr:");
+        writeHexInt((u64)phys_addr);
+        writeString(", actual:");
+        writeHexInt((u64)l4_table_addr);
+        writeNewLine();
+        writeString("Attempting to deallocate: ");
+        writeHexInt(p4->entries[0]);
+        writeNewLine();
+    }
+    else if (starts_with(str, "newpage"))
+    {
+        u64 ptr = 0x1;
+        ptr = 0x40000000; // P4 = 0, P3 = 1, P2 = 0, P1 = 0
+        writeString("Mapping new page\n");
+        map_page(0xcafeba00, (void *)ptr, 0b10);
+        writeString("Getting phys addr\n");
+        u64 phys_addr = get_physaddr((void *)ptr);
+        writeString("Phys_addr:");
+        writeHexInt((u64)phys_addr);
+        writeNewLine();
     }
     else if (starts_with(str, "alloc"))
     {

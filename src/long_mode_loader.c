@@ -19,6 +19,7 @@ void error(unsigned char error_code)
 u64 p4_table[512] __attribute__((aligned(4096)));
 u64 p3_table[512] __attribute__((aligned(4096)));
 u64 p2_table[512] __attribute__((aligned(4096)));
+u64 p1_table[512] __attribute__((aligned(4096)));
 
 // void init_page_tables()
 // {

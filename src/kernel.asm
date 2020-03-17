@@ -26,6 +26,7 @@ extern error
 extern p4_table
 extern p3_table
 extern p2_table
+extern p1_table
 extern tester
 
 
@@ -106,29 +107,35 @@ set_up_page_tables:
     mov [p4_table], eax
 
     ; recursive page map
-    ; mov eax, p4_table
-    ; or eax, 0b11
-    ; mov [p4_table + 512 * 8], eax
+    mov eax, p4_table
+    or eax, 0b11
+    mov [p4_table + 511 * 8], eax
 
     ; map first P3 entry to P2 table
     mov eax, p2_table
-    or eax, 0b11       ; present + writable
+    or eax, 0b11        ; present + writable
     mov [p3_table], eax
 
+    ; map first P2 entry to P1 table
+    mov eax, p1_table
+    or eax, 0b11        ; present + writable
+    mov [p2_table], eax
+
+    mov ecx, 0          ; zero out counter variable
+
     ; map each P2 entry to a huge 2MiB page
-    mov ecx, 0         ; counter variable
+    mov ecx, 0          ; counter variable
 
 .map_p2_table:
-    ; map ecx-th P2 entry to a huge page that starts at address 2MiB*ecx
+    ; map ecx-th P1 entry to a huge page that starts at address 2MiB*ecx
     mov eax, 0x200000  ; 2MiB
     mul ecx            ; start address of ecx-th page
-    or eax, 0b10000011 ; present + writable + huge
+    or eax, 0b10000011 ; present + writable
     mov [p2_table + ecx*8], eax ; map ecx-th entry
 
     inc ecx            ; increase counter
     cmp ecx, 512       ; if counter == 512, the whole P2 table is mapped
     jne .map_p2_table  ; else map the next entry
-
     ret
 
 

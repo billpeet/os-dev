@@ -3,7 +3,7 @@
 #include "idt.h"
 #include "pong.h"
 #include "shell.h"
-#include "memory.h"
+#include "frame_allocator.h"
 #include "types.h"
 #include "boot_info.h"
 
@@ -12,6 +12,15 @@ extern u16 code_selector;
 void hlt()
 {
     asm("hlt");
+}
+
+void panic(u8 error_code)
+{
+    writeString("PANIC!\n");
+    writeString("Error code ");
+    writeInt(error_code);
+    writeNewLine();
+    hlt();
 }
 
 void reboot()
