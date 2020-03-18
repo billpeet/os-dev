@@ -1,6 +1,7 @@
 #include "idt.h"
 #include "keyboard_map.h"
 #include "vga.h"
+#include "kernel.h"
 
 #define IDT_SIZE 256
 #define TASK_GATE 0x85
@@ -78,7 +79,7 @@ INTERRUPT void keyboard_handler(struct interrupt_frame *frame)
 {
     handler_complete();
 
-    u8 status = read_port(KEYBOARD_STATUS_PORT);
+    u16 status = read_port(KEYBOARD_STATUS_PORT);
 
     if (status & 0x01)
     {

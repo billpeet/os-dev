@@ -4,7 +4,8 @@ CFLAGS=-fno-stack-protector -mgeneral-regs-only -nostdlib -nodefaultlibs -ffrees
 LD=ld
 SRCDIR=src
 OBJDIR=obj
-OBJ=$(OBJDIR)/kernel.o $(OBJDIR)/vga.o $(OBJDIR)/idt.o $(OBJDIR)/pong.o $(OBJDIR)/shell.o $(OBJDIR)/alloc.o $(OBJDIR)/string.o $(OBJDIR)/frame_allocator.o $(OBJDIR)/paging.o $(OBJDIR)/long_mode_loader.o $(OBJDIR)/boot_info.o
+CFILES=$(wildcard $(SRCDIR)/*.c)
+OBJ=$(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(CFILES))
 
 all: os.iso
 

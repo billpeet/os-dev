@@ -48,10 +48,6 @@ page_table_t *create_table(page_table_t *parent, u64 index)
         u64 frame = (u64)allocate_frame();     // grab a new frame for the new table
         parent->entries[index] = frame | 0b11; // present & writable flags
 
-        writeString("New table at ");
-        writeHexInt(frame);
-        writeNewLine();
-
         // Zero out new table
         page_table_t *new_table = (page_table_t *)frame;
         for (u64 i = 0; i < ENTRY_COUNT; i++)
@@ -81,19 +77,19 @@ void translate_address(void *virt_addr, u64 *p4_index, u64 *p3_index, u64 *p2_in
     *p2_index = ((u64)virt_page_addr >> 9) & 0777;
     *p1_index = ((u64)virt_page_addr) & 0777;
 
-    writeString("Transforming virt_addr ");
-    writeInt((u64)virt_addr);
-    writeString(": P4 index ");
-    writeInt(*p4_index);
-    writeString(", P3 index ");
-    writeInt(*p3_index);
-    writeString(", P2 index ");
-    writeInt(*p2_index);
-    writeString(", P1 index ");
-    writeInt(*p1_index);
-    writeString(", offset ");
-    writeInt(*offset);
-    writeString("\n");
+    // writeString("Transforming virt_addr ");
+    // writeInt((u64)virt_addr);
+    // writeString(": P4 index ");
+    // writeInt(*p4_index);
+    // writeString(", P3 index ");
+    // writeInt(*p3_index);
+    // writeString(", P2 index ");
+    // writeInt(*p2_index);
+    // writeString(", P1 index ");
+    // writeInt(*p1_index);
+    // writeString(", offset ");
+    // writeInt(*offset);
+    // writeString("\n");
 }
 
 u64 get_physaddr(void *virt_addr)
@@ -120,12 +116,7 @@ u64 get_physaddr(void *virt_addr)
     if (flags & 0x80)
     {
         // 4MiB page - return this
-        writeString("offset before:");
-        writeHexInt(offset);
         offset += p1_index << 12;
-        writeString(", offset after:");
-        writeHexInt(offset);
-        writeNewLine();
         return addr + offset;
     }
 
@@ -159,11 +150,6 @@ void map_page(u64 phys_addr, void *virt_addr, u8 flags)
             panic(2);
         }
 
-        // Creating a 'huge' 4MiB page
-        writeString("Mapping a huge page at P2 index ");
-        writeInt(p2_index);
-        writeNewLine();
-
         p2->entries[p2_index] = (u64)phys_addr | flags | 0x01;
     }
     else
@@ -173,12 +159,6 @@ void map_page(u64 phys_addr, void *virt_addr, u8 flags)
             writeString("Invalid physical frame - must be 4096 byte aligned!\n");
             panic(2);
         }
-
-        writeString("Mapping a standard page at P1 index ");
-        writeInt(p1_index);
-        writeString(", to phys addr ");
-        writeHexInt(phys_addr);
-        writeNewLine();
 
         page_table_t *p1 = create_table(p2, p2_index);
         p1->entries[p1_index] = phys_addr | flags | 0x01;
@@ -197,10 +177,6 @@ void unmap_page(void *virt_addr)
     page_table_t *p4 = level_4_table();
     page_table_t *p3 = get_page_table(p4, p4_index);
     page_table_t *p2 = get_page_table(p3, p3_index);
-
-    writeString("Unmapping a standard page at P1 index ");
-    writeInt(p1_index);
-    writeNewLine();
 
     page_table_t *p1 = get_page_table(p2, p2_index);
     p1->entries[p1_index] = 0; // reset to 0 (present bit = 0)

@@ -6,4 +6,6 @@ typedef unsigned short int u16;
 typedef unsigned int u32;
 typedef unsigned long u64;
 
+#define NULLPTR (void *)0
+
 #endif

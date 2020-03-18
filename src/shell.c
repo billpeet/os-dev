@@ -7,6 +7,8 @@
 #include "frame_allocator.h"
 #include "paging.h"
 #include "kernel.h"
+#include "lba.h"
+#include "fat.h"
 
 char str[100];
 int pos;
@@ -152,29 +154,76 @@ void shell_execute()
     else if (starts_with(str, "alloc"))
     {
         u32 *a = malloc(sizeof(u32));
-        *a = 23;
-        writeString("Allocated a u32 at ");
-        writeInt((u64)a);
-        writeString(", with value ");
-        writeInt(*a);
-        writeString("\n");
+        *a = 23; // dereference to check it's valid
+        free(a);
+        u64 *b = malloc(sizeof(u64));
+        if ((u64)b == (u64)a)
+            writeString("ASSERT 1 FAILED\n"); // Check 1: won't attempt to use a free area that's too small
+        free(b);                              // a & b are now free
+        u32 *c = malloc(sizeof(u32));
+        if ((u64)c != (u64)b)
+            writeString("ASSERT 2 FAILED\n"); // Check 2: will use a free area that's larger than the right size
+        u32 *d = malloc(sizeof(u32));
+        if ((u64)d != (u64)a)
+            writeString("ASSERT 3 FAILED\n"); // Check 3: will use a free area that's the right size
+
+        void *e = malloc(sizeof(u8));
+        void *f = malloc(sizeof(u8));
+        void *g = malloc(sizeof(u8));
+        void *h = malloc(sizeof(u8));
+        void *i = malloc(sizeof(u64));
+        free(i);
+        free(f);
+        free(e);
+        free(h);
+
+        void *j = malloc(sizeof(u32));
+        if ((u64)j != (u64)i)
+            writeString("ASSERT 4 FAILED\n"); // Check 4: will find a suitable free area that was freed several steps ago
+
+        writeString("All tests passed!\n");
     }
     else if (starts_with(str, "breakpoint"))
     {
         writeString("Triggering breakpoint exception:\n");
         asm("int3");
     }
-    else if (starts_with(str, "page fault"))
+    else if (starts_with(str, "pagefault"))
     {
         writeString("Triggering page fault exception:\n");
         int *ptr = (int *)0xdeadbeef;
         *ptr = 1;
     }
-    else if (starts_with(str, "divide by zero"))
+    else if (starts_with(str, "divbyzero"))
     {
         writeString("Triggering divide by zero exception:\n");
         int i = 0;
         i /= i;
+    }
+    else if (starts_with(str, "lba"))
+    {
+        u8 *ptr = allocate_frame();
+        read_sectors_lba(0, 1, 1, ptr);
+        writeString("Before: ");
+        for (int i = 0; i < SECTOR_SIZE; i++)
+        {
+            writeHexInt(ptr[i]);
+        }
+        ptr[0] = 0x00;
+        ptr[1] = 0x00;
+        write_sectors_lba(0, 1, 1, ptr);
+        u8 *ptr2 = allocate_frame();
+        read_sectors_lba(0, 1, 1, ptr2);
+        writeString("\nAfter: ");
+        for (int i = 0; i < SECTOR_SIZE; i++)
+        {
+            writeHexInt(ptr2[i]);
+        }
+        writeNewLine();
+    }
+    else if (starts_with(str, "file"))
+    {
+        display_header(0);
     }
     else if (starts_with(str, "reboot"))
     {

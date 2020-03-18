@@ -2,15 +2,12 @@ global long_mode_start
 global idt
 global idtr
 global load_idt
-global trigger_int
-global setup_int
 global write_port
+global write_port_16
 global read_port
+global test_read
 
 section .text
-int_handler:
-    mov dword [0xb8000], ') : '
-    iretq
 
 align 4
 idt:
@@ -23,9 +20,19 @@ idt:
 extern kmain
 extern code_selector
 
+long_mode_start:    ; start of long mode
+    mov ax, 0       ; zero out registers
+    mov ss, ax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    jmp kmain       ; jump to kmain in kernel.c
+    ret
+
 read_port:
     mov rdx, rdi
-    in al, dx
+    in ax, dx
     ret
 
 write_port:
@@ -34,32 +41,13 @@ write_port:
     out dx, al
     ret
 
-long_mode_start:
-    mov ax, 0
-    mov ss, ax
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    jmp kmain
+write_port_16:
+    mov rdx, rdi
+    mov rax, rsi
+    out dx, ax
     ret
 
 load_idt:
     lidt [idtr]
     sti
-    ret
-
-setup_int:
-    mov qword rax, int_handler
-    mov [idt+49*16], ax
-    mov word [idt+49*16+2], code_selector
-    mov word [idt+49*16+4], 0x8e00
-    shr rax, 16
-    mov [idt+49*16+6], ax
-    shr rax, 16
-    mov [idt+49*16+8], rax
-    ret
-
-trigger_int:
-    int 49
     ret

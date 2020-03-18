@@ -13,7 +13,4 @@ typedef void (*keyboardHandlerFn)(char c);
 void register_handler(keyboardHandlerFn handler);
 void unregister_handler(keyboardHandlerFn handler);
 
-extern void write_port(u16 port, u8 value);
-extern u8 read_port(u16 port);
-
 #endif

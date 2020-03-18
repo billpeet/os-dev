@@ -6,6 +6,7 @@
 #include "frame_allocator.h"
 #include "types.h"
 #include "boot_info.h"
+#include "alloc.h"
 
 extern u16 code_selector;
 
@@ -47,8 +48,8 @@ void kmain(boot_info_t *boot_info)
     writeString("Welcome to PeetOS\n");
     init_boot_info(boot_info);
     init_frame_allocator();
-
     init_interrupts();
+    init_heap();
 
     shell();
     while (1)

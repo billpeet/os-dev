@@ -106,7 +106,7 @@ void writeInt(u64 i)
 
 void writeHexInt(u64 i)
 {
-    writeString("0x");
+    // writeString("0x");
     if (i < 16)
         writeChar(getHexChar((char)i));
     else

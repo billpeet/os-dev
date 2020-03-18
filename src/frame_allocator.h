@@ -5,8 +5,6 @@
 
 #define PAGE_SIZE 4096
 
-#define NULLPTR (void *)0
-
 void init_frame_allocator();
 
 void *allocate_frame();
