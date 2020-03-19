@@ -2,9 +2,10 @@ global long_mode_start
 global idt
 global idtr
 global load_idt
+global read_port
+global inb
 global write_port
 global write_port_16
-global read_port
 global test_read
 
 section .text
@@ -33,6 +34,11 @@ long_mode_start:    ; start of long mode
 read_port:
     mov rdx, rdi
     in ax, dx
+    ret
+
+inb:
+    mov rdx, rdi
+    in al, dx
     ret
 
 write_port:

@@ -10,5 +10,6 @@ void panic(u8 error_code);
 extern void write_port(u16 port, u8 value);
 extern void write_port_16(u16 port, u16 value);
 extern u16 read_port(u16 port);
+extern u8 inb(u16 port);
 
 #endif

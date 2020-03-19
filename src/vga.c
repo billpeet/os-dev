@@ -1,6 +1,7 @@
 #include "vga.h"
 #include "string.h"
 #include "types.h"
+#include <stdarg.h>
 
 #define VGA_MAX VGA_WIDTH *VGA_HEIGHT
 
@@ -163,4 +164,43 @@ void writeStrHexInt(const char *str, u64 i)
     writeString("0x");
     writeHexInt(i);
     writeNewLine();
+}
+
+void printf(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    for (int i = 0; fmt[i] != '\0'; i++)
+    {
+        if (fmt[i] == '%')
+        {
+            switch (fmt[++i])
+            {
+            case 'd':
+            case 'i':
+                writeSInt(va_arg(args, long));
+                break;
+            case 'u':
+                writeInt(va_arg(args, u64));
+                break;
+            case 'x':
+            case 'X':
+                writeHexInt(va_arg(args, u64));
+                break;
+            case 'c':
+                writeChar(va_arg(args, int));
+                break;
+            case 's':
+                writeString(va_arg(args, char *));
+                break;
+            default:
+                writeChar('%');
+                writeChar(fmt[i]);
+                break;
+            }
+        }
+        else
+            writeChar(fmt[i]);
+    }
 }

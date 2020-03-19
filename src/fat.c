@@ -4,12 +4,20 @@
 #include "alloc.h"
 #include "string.h"
 
+#define SECTORS_PER_FAT 1539
+
 fat32_boot_sector_t last_header;
 u32 last_drive_number;
+u32 fat_cache[SECTORS_PER_FAT * SECTOR_SIZE];
 
 void get_header(u8 drive_number, fat32_boot_sector_t *header)
 {
     read_sectors_lba(drive_number, 0, 1, (lba_sector_t *)header);
+}
+
+void read_fat(u32 *fat)
+{
+    read_sectors_lba(last_drive_number, last_header.reserved_sectors, last_header.sectors_per_fat, (lba_sector_t *)fat);
 }
 
 int load_header(u32 drive_number)
@@ -23,15 +31,9 @@ int load_header(u32 drive_number)
             writeString("Invalid FAT disk!\n");
             return 0;
         }
+        read_fat(fat_cache);
     }
     return 1;
-}
-
-u32 *read_fat()
-{
-    u32 *fat_ptr = malloc(last_header.sectors_per_fat * SECTOR_SIZE);
-    read_sectors_lba(last_drive_number, last_header.reserved_sectors, last_header.sectors_per_fat, (lba_sector_t *)fat_ptr);
-    return fat_ptr;
 }
 
 void dump_header(fat32_boot_sector_t *header)
@@ -200,7 +202,6 @@ fat32_entry_t *find_sub_directory(fat32_entry_t *current_dir, char *subdir_name)
 
 void *read_file(u8 drive_number, fat32_entry_t *current_dir, char *file_name, u32 *size)
 {
-    u32 *fat; // = read_fat();
     if (!load_header(drive_number))
         return NULLPTR;
 
@@ -209,8 +210,7 @@ void *read_file(u8 drive_number, fat32_entry_t *current_dir, char *file_name, u3
     u32 cluster_number = get_cluster_number(entry);
     writeStrInt("Cluster ", cluster_number);
 
-    // writeStrHexInt("FAT value at this cluster: ", fat[cluster_number]);
-    // free(fat);
+    writeStrHexInt("FAT value at this cluster: ", fat_cache[cluster_number]);
 
     u32 cluster_begin = last_header.reserved_sectors + (last_header.fat_copies * last_header.sectors_per_fat);
 

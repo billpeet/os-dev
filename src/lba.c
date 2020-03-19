@@ -5,6 +5,7 @@
 #define CMD_READ 0x20
 #define CMD_WRITE 0x30
 #define BUSY_FLAG 0x80
+#define RDY_FLAG 0x40
 
 void dump_sector(lba_sector_t *sector)
 {
@@ -58,11 +59,11 @@ void read_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, lba_sect
     write_port(base + 6, ((sector_number >> 24) & 0x0F) | drive);
     write_port(base + 7, CMD_READ);
 
-    while (!(read_port(base + 7) & 0x08))
+    while (!(inb(base + 7) & (BUSY_FLAG | RDY_FLAG) != RDY_FLAG))
     {
-        writeStrHexInt("Reading ", read_port(base + 7));
+        writeStrHexInt("Reading ", inb(base + 7));
     }
-    writeStrHexInt("Reading ", read_port(base + 7));
+    writeStrHexInt("Reading ", inb(base + 7));
 
     u16 *buffer = (u16 *)dest;
     for (u16 i = 0; i < (sector_count * (512 / 2)); i++)

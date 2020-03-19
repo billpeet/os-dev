@@ -18,5 +18,6 @@ void writeSInt(long i);
 void writeNewLine();
 void writeStrInt(const char *str, u64 i);
 void writeStrHexInt(const char *str, u64 i);
+void printf(const char *fmt, ...);
 
 #endif

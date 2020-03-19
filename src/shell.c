@@ -329,6 +329,10 @@ void shell_execute()
             }
         }
     }
+    else if (!strcasecmp(curr_cmd, "printf"))
+    {
+        printf("string: (%s), sint: %i, uint: %u, hex: %x\n", "peanuts", -231, 123, 234);
+    }
     else if (!strcasecmp(curr_cmd, "reboot"))
     {
         writeString("Rebooting...\n");
