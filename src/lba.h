@@ -7,12 +7,13 @@
 
 struct lba_sector
 {
-    u8 *bytes[SECTOR_SIZE];
+    u8 bytes[SECTOR_SIZE];
 };
 
 typedef struct lba_sector lba_sector_t;
 
-void read_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, void *dest);
-void write_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, void *dest);
+void read_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, lba_sector_t *dest);
+void write_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, lba_sector_t *dest);
+void dump_sector(lba_sector_t *sector);
 
 #endif

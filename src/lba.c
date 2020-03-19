@@ -6,8 +6,16 @@
 #define CMD_WRITE 0x30
 #define BUSY_FLAG 0x80
 
+void dump_sector(lba_sector_t *sector)
+{
+    for (u32 i = 0; i < SECTOR_SIZE; i++)
+    {
+        writeHexInt(sector->bytes[i]);
+    }
+}
+
 // 24-bit LBA
-void read_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, void *dest)
+void read_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, lba_sector_t *dest)
 {
     u16 base;
 
@@ -42,19 +50,19 @@ void read_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, void *de
         drive |= 0x10;
     }
 
-    while (read_port(base + 7) & BUSY_FLAG)
-        ;
-
     write_port(base + 1, 0x00);
     write_port(base + 2, sector_count);
-    write_port(base + 3, (u8)(sector_number & 0xff));
-    write_port(base + 4, (u8)(sector_number & 0xff00) >> 8);
-    write_port(base + 5, (u8)(sector_number & 0xff0000) >> 16);
+    write_port(base + 3, (u8)(sector_number));
+    write_port(base + 4, (u8)(sector_number >> 8));
+    write_port(base + 5, (u8)(sector_number >> 16));
     write_port(base + 6, ((sector_number >> 24) & 0x0F) | drive);
     write_port(base + 7, CMD_READ);
 
-    while (read_port(base + 7) & BUSY_FLAG)
-        ;
+    while (!(read_port(base + 7) & 0x08))
+    {
+        writeStrHexInt("Reading ", read_port(base + 7));
+    }
+    writeStrHexInt("Reading ", read_port(base + 7));
 
     u16 *buffer = (u16 *)dest;
     for (u16 i = 0; i < (sector_count * (512 / 2)); i++)
@@ -64,7 +72,7 @@ void read_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, void *de
     }
 }
 
-void write_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, void *dest)
+void write_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, lba_sector_t *dest)
 {
     u16 base;
 
@@ -110,8 +118,10 @@ void write_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, void *d
     write_port(base + 6, ((sector_number >> 24) & 0x0F) | drive);
     write_port(base + 7, CMD_WRITE);
 
-    while (read_port(base + 7) & BUSY_FLAG)
-        ;
+    while (!(read_port(base + 7) & 0x80))
+    {
+        writeStrHexInt("Reading ", read_port(base + 7));
+    }
 
     u16 *buffer = (u16 *)dest;
     for (u16 i = 0; i < (sector_count * (512 / 2)); i++)

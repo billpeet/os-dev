@@ -10,9 +10,9 @@ u64 memory_map_count;
 
 void init_boot_info(boot_info_t *boot_info)
 {
-    writeString("Total size: ");
-    writeInt(boot_info->total_size);
-    writeString("\n");
+    // writeString("Total size: ");
+    // writeInt(boot_info->total_size);
+    // writeString("\n");
 
     boot_tag_t *tag = (boot_tag_t *)boot_info + 1;
     for (int i = 0; i < 100; i++)
@@ -39,24 +39,24 @@ void init_boot_info(boot_info_t *boot_info)
                 memory_map_entry_t *entry = memory_map + i;
                 if (entry->type == 1)
                 {
-                    writeString("  start: ");
-                    writeHexInt(entry->base_addr);
-                    writeString(", length: ");
-                    writeHexInt(entry->length);
-                    writeString("\n");
+                    // writeString("  start: ");
+                    // writeHexInt(entry->base_addr);
+                    // writeString(", length: ");
+                    // writeHexInt(entry->length);
+                    // writeString("\n");
                 }
             }
         }
         else if (tag->type == 9)
         {
             // ELF symbols
-            writeString("ELF symbol - size: ");
-            writeInt(tag->size);
-            writeNewLine();
+            // writeString("ELF symbol - size: ");
+            // writeInt(tag->size);
+            // writeNewLine();
             u32 *ptr = (u32 *)(tag + 1);
             ptr += 3;
             elf_section_entry_t *entry = (elf_section_entry_t *)ptr;
-            writeString("Kernel sections: \n");
+            // writeString("Kernel sections: \n");
             u64 min = 0xffffffffffffffff;
             u64 max = 0x0;
             while ((u64)entry < (u64)tag + tag->size)
@@ -67,27 +67,27 @@ void init_boot_info(boot_info_t *boot_info)
                         min = entry->address;
                     if (entry->address + entry->size > max)
                         max = entry->address + entry->size;
-                    writeString("  addr: ");
-                    writeHexInt(entry->address);
-                    writeString(", size: ");
-                    writeHexInt(entry->size);
-                    writeString(", flags: ");
-                    writeHexInt(entry->flags);
-                    writeString("\n");
+                    // writeString("  addr: ");
+                    // writeHexInt(entry->address);
+                    // writeString(", size: ");
+                    // writeHexInt(entry->size);
+                    // writeString(", flags: ");
+                    // writeHexInt(entry->flags);
+                    // writeString("\n");
                 }
                 entry++;
             }
-            writeString("kernel start: ");
-            writeHexInt(min);
-            writeString(", kernel end: ");
-            writeHexInt(max);
-            writeString("\n");
+            // writeString("kernel start: ");
+            // writeHexInt(min);
+            // writeString(", kernel end: ");
+            // writeHexInt(max);
+            // writeString("\n");
 
-            writeString("boot info: ");
-            writeHexInt((u64)boot_info);
-            writeString(", kernel end: ");
-            writeHexInt((u64)boot_info + boot_info->total_size);
-            writeString("\n");
+            // writeString("boot info: ");
+            // writeHexInt((u64)boot_info);
+            // writeString(", kernel end: ");
+            // writeHexInt((u64)boot_info + boot_info->total_size);
+            // writeString("\n");
 
             kernel_start = min;
             kernel_end = max;

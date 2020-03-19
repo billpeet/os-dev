@@ -5,7 +5,7 @@
 #include "vga.h"
 #include "kernel.h"
 
-#define HEAP_SIZE 100 * PAGE_SIZE // 100 KiB
+#define HEAP_SIZE 1000 * PAGE_SIZE // 1000 KiB
 #define HEAP_START 0x444444440000
 #define HEAP_END HEAP_START + HEAP_SIZE
 void *current;

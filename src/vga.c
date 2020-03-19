@@ -149,3 +149,18 @@ void writeNewLine()
 {
     writeChar('\n');
 }
+
+void writeStrInt(const char *str, u64 i)
+{
+    writeString(str);
+    writeInt(i);
+    writeNewLine();
+}
+
+void writeStrHexInt(const char *str, u64 i)
+{
+    writeString(str);
+    writeString("0x");
+    writeHexInt(i);
+    writeNewLine();
+}

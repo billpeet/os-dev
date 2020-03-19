@@ -28,9 +28,7 @@ void next_area()
         memory_map_entry_t *entry = memory_map + i;
         if (entry->type == 1 && get_frame_containing_address(entry->base_addr + entry->length - 1) >= next_free_frame)
         {
-            writeString("New area: ");
-            writeHexInt(entry->base_addr);
-            writeNewLine();
+            // writeStrHexInt("New area: ", entry->base_addr);
             current_area = entry;
             u64 start_frame = get_frame_containing_address(entry->base_addr);
             if (next_free_frame < start_frame)
@@ -47,9 +45,7 @@ void *allocate_frame()
     if (free_frames != NULLPTR)
     {
         void *free_frame = free_frames;
-        writeString("Spare frame at ");
-        writeHexInt((u64)free_frame);
-        writeNewLine();
+        // writeStrHexInt("Spare frame at: ", (u64)free_frame);
         free_frames = free_frames->next;
         return free_frame;
     }

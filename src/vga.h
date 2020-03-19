@@ -16,5 +16,7 @@ void writeInt(unsigned long i);
 void writeHexInt(unsigned long i);
 void writeSInt(long i);
 void writeNewLine();
+void writeStrInt(const char *str, u64 i);
+void writeStrHexInt(const char *str, u64 i);
 
 #endif
