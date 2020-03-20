@@ -1,31 +1,36 @@
 ASM=nasm
 CC=gcc
-CFLAGS=-fno-stack-protector -mgeneral-regs-only -nostdlib -nodefaultlibs -ffreestanding
+CFLAGS=-fno-stack-protector -mgeneral-regs-only -nostdlib -nodefaultlibs -ffreestanding -Isrc/libc/include
 LD=ld
 SRCDIR=src
 OBJDIR=obj
-CFILES=$(wildcard $(SRCDIR)/*.c)
-OBJ=$(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(CFILES))
+CFILES=$(wildcard $(SRCDIR)/kernel/*.c)
+LIBCFILES=$(wildcard $(SRCDIR)/libc/*.c)
+KERNELOBJ=$(patsubst $(SRCDIR)/kernel/%.c,$(OBJDIR)/kernel/%.o,$(CFILES))
+LIBCOBJ=$(patsubst $(SRCDIR)/libc/%.c,$(OBJDIR)/libc/%.o,$(LIBCFILES))
 
-all: os.iso
+all: os.iso fat.img
 
 run: kernel
 	qemu-system-i386 -kernel kernel
 
 clean:
-	rm -f $(OBJDIR)/* isofiles/boot/kernel.bin os.iso
+	rm -f $(OBJDIR)/kernel/* $(OBJDIR)/libc/* isofiles/boot/kernel.bin os.iso
 
 os.iso: isofiles/boot/kernel.bin
 	grub-mkrescue -o os.iso isofiles
 
-isofiles/boot/kernel.bin: $(OBJDIR)/kasm.o $(OBJDIR)/long.o $(OBJ)
-	$(LD) -n -T link.ld -o isofiles/boot/kernel.bin $(OBJDIR)/kasm.o $(OBJDIR)/long.o $(OBJ)
+fat.img: hdfiles/*
+	sh build-fat.sh
+
+isofiles/boot/kernel.bin: $(OBJDIR)/kernel/kasm.o $(OBJDIR)/kernel/long.o $(KERNELOBJ) $(LIBCOBJ)
+	$(LD) -n -T link.ld -o isofiles/boot/kernel.bin $(OBJDIR)/kernel/kasm.o $(OBJDIR)/kernel/long.o $(KERNELOBJ) $(LIBCOBJ)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) -c $< -o $@ $(CFLAGS)
 
-$(OBJDIR)/kasm.o: $(SRCDIR)/kernel.asm
-	$(ASM) -f elf64 $(SRCDIR)/kernel.asm -o $@
+$(OBJDIR)/kernel/kasm.o: $(SRCDIR)/kernel/kernel.asm
+	$(ASM) -f elf64 $< -o $@
 
-$(OBJDIR)/long.o: $(SRCDIR)/long.asm
-	$(ASM) -f elf64 $(SRCDIR)/long.asm -o $@
+$(OBJDIR)/kernel/long.o: $(SRCDIR)/kernel/long.asm
+	$(ASM) -f elf64 $< -o $@

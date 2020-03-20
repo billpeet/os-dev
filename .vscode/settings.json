@@ -6,6 +6,8 @@
         "boot_info.h": "c",
         "frame_allocator.h": "c",
         "stdbool.h": "c",
-        "lba.h": "c"
+        "lba.h": "c",
+        "string.h": "c",
+        "types.h": "c"
     }
 }
