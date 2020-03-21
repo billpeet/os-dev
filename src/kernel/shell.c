@@ -14,7 +14,7 @@ char curr_cmd[100];
 char curr_param[100];
 int pos;
 u8 current_drive;
-fat32_entry_t *current_dir;
+fat32_directory_t current_dir;
 char current_dir_name[100] = "\\";
 char current_dir_str[100] = "C:\\";
 
@@ -46,6 +46,8 @@ void update_location_string()
 
 void change_drive(u8 drive_number)
 {
+    if (current_dir.entries != NULLPTR)
+        free(current_dir.entries);
     current_drive = drive_number;
     current_dir = read_root_directory(drive_number);
     strcpy(current_dir_name, "\\");
@@ -275,7 +277,8 @@ void shell_execute()
             else
             {
                 u32 cluster_number = get_cluster_number(entry);
-                free(current_dir);
+                if (current_dir.entries != NULLPTR)
+                    free(current_dir.entries);
                 printf("Cluster number: %u\n", cluster_number);
                 current_dir = read_directory(current_drive, cluster_number);
                 if (strcmp(curr_param, ".") != 0)
@@ -320,13 +323,26 @@ void shell_execute()
             else
             {
                 printf("File size %u\n", file_size);
-                for (int i = 0; i < file_size && i < 1000; i++)
-                    writeChar(file_ptr[i]);
-                // for (int i = file_size - 1; i >= 0; i--)
-                //     writeChar(file_ptr[i]);
+                for (int i = 0; i < file_size /*&& i < 100*/; i++)
+                    printf("%i", file_ptr[i]);
                 writeNewLine();
                 free(file_ptr);
             }
+        }
+    }
+    else if (!strcasecmp(curr_cmd, "touch"))
+    {
+        writeNewLine();
+        if (curr_param[0] == '\0' || curr_param[0] == ' ')
+        {
+            printf("No file provided\n");
+        }
+        else
+        {
+            u32 file_size = 2;
+            printf("Adding file %s\n", curr_param);
+            create_file(current_drive, current_dir, curr_param, ".txt", file_size);
+            printf("Added file %s\n", curr_param);
         }
     }
     else if (!strcasecmp(curr_cmd, "reboot"))

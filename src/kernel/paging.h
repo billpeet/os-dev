@@ -18,5 +18,6 @@ u64 get_physaddr(void *virt_addr);
 
 void map_page(u64 phys_addr, void *virt_addr, u8 flags);
 void unmap_page(void *virt_addr);
+void *allocate_page();
 
 #endif

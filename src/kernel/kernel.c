@@ -8,6 +8,7 @@
 #include "boot_info.h"
 #include "alloc.h"
 #include "lba.h"
+#include "task.h"
 
 extern u16 code_selector;
 
@@ -50,6 +51,12 @@ void kmain(boot_info_t *boot_info)
     init_interrupts();
     outb(0x1f6, 0x40);
     init_heap();
+
+    init_tasking();
+
+    printf("Switching...\n");
+    yield();
+    printf("returned to main task\n");
 
     shell();
     while (1)

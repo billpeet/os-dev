@@ -6,10 +6,13 @@
 #include "kernel.h"
 
 #define SECTORS_PER_FAT 1539
+#define FAT_ENTRIES SECTORS_PER_FAT *SECTOR_SIZE / sizeof(u32)
+#define CLUSTER_SIZE last_header.sectors_per_cluster *SECTOR_SIZE
+#define DIR_ENTRIES_PER_SECTOR CLUSTER_SIZE / sizeof(fat32_entry_t)
 
 fat32_boot_sector_t last_header;
 u32 last_drive_number;
-u32 fat_cache[(SECTORS_PER_FAT * SECTOR_SIZE)];
+u32 fat_cache[FAT_ENTRIES];
 
 void get_header(u8 drive_number, fat32_boot_sector_t *header)
 {
@@ -21,6 +24,13 @@ void read_fat(u32 *fat)
     for (u32 i = 0; i < SECTORS_PER_FAT; i++)
         // should be reserved sectors
         read_sectors_lba(last_drive_number, 32 + i, 1, (lba_sector_t *)fat + i);
+}
+
+void save_fat()
+{
+    for (u32 i = 0; i < SECTORS_PER_FAT; i++)
+        // should be reserved sectors
+        write_sectors_lba(last_drive_number, 32 + i, 1, (lba_sector_t *)fat_cache + i);
 }
 
 int load_header(u32 drive_number)
@@ -117,48 +127,63 @@ void dump_fat32_entry(fat32_entry_t *entry)
     writeChar('\n');
 }
 
-fat32_entry_t *read_directory(u8 drive_number, int cluster_number)
+fat32_directory_t read_directory(u8 drive_number, int cluster_number)
 {
+    fat32_directory_t dir;
+    dir.drive_number = drive_number;
+
     if (!load_header(drive_number))
-        return NULLPTR;
+        return dir;
 
-    u32 cluster_begin = last_header.reserved_sectors + (last_header.fat_copies * last_header.sectors_per_fat);
+    u32 cluster_start = last_header.reserved_sectors + (last_header.fat_copies * last_header.sectors_per_fat);
 
-    if (cluster_number < 2)
-        cluster_number = last_header.root_cluster;
+    dir.cluster = cluster_number;
+    if (dir.cluster < 2)
+        dir.cluster = last_header.root_cluster;
 
-    u32 sector_number = cluster_begin + (cluster_number - 2) * last_header.sectors_per_cluster;
+    u32 sector_number = cluster_start + (dir.cluster - 2) * last_header.sectors_per_cluster;
 
     lba_sector_t *cluster = malloc(sizeof(lba_sector_t) * last_header.sectors_per_cluster);
     read_sectors_lba(drive_number, sector_number, last_header.sectors_per_cluster, cluster);
 
-    return (fat32_entry_t *)cluster;
+    dir.entries = (fat32_entry_t *)cluster;
+    return dir;
 }
 
-fat32_entry_t *read_root_directory(u8 drive_number)
+fat32_directory_t read_root_directory(u8 drive_number)
 {
     return read_directory(drive_number, 0);
 }
 
-// Windows-style 'dir' command
-void dump_directory(fat32_entry_t *dir)
+void save_directory(fat32_directory_t dir)
 {
-    if (dir == NULLPTR)
+    u32 cluster_start = last_header.reserved_sectors + (last_header.fat_copies * last_header.sectors_per_fat);
+    u32 sector_number = cluster_start + (dir.cluster - 2) * last_header.sectors_per_cluster;
+    write_sectors_lba(dir.drive_number, sector_number, last_header.sectors_per_cluster, (lba_sector_t *)dir.entries);
+}
+
+// Windows-style 'dir' command
+void dump_directory(fat32_directory_t dir)
+{
+    if (dir.entries == NULLPTR)
         return;
     writeChar('\n');
     printf("Mode       Name\n");
     printf("----       ----\n");
 
-    for (u32 i = 0; dir[i].filename[0]; i++)
+    fat32_entry_t *entries = dir.entries;
+    dump_fat32_entry(entries);
+
+    for (u32 i = 0; entries[i].filename[0]; i++)
     {
-        if (is_directory(&dir[i]) && !is_long_name(&dir[i]))
-            dump_fat32_entry(dir + i);
+        if (is_directory(&entries[i]) && !is_long_name(&entries[i]))
+            dump_fat32_entry(entries + i);
     }
 
-    for (u32 i = 0; dir[i].filename[0]; i++)
+    for (u32 i = 0; entries[i].filename[0]; i++)
     {
-        if (!is_directory(&dir[i]) && !is_long_name(&dir[i]))
-            dump_fat32_entry(dir + i);
+        if (!is_directory(&entries[i]) && !is_long_name(&entries[i]))
+            dump_fat32_entry(entries + i);
     }
 
     writeChar('\n');
@@ -169,54 +194,54 @@ u32 get_cluster_number(fat32_entry_t *f)
     return (f->first_cluster_high << 16) | f->first_cluster_low;
 }
 
-fat32_entry_t *find_entry(fat32_entry_t *current_dir, char *entry_name, u8 dir)
+fat32_entry_t *find_entry(fat32_directory_t current_dir, char *entry_name, u8 dir)
 {
-    for (u32 i = 0; current_dir[i].filename[0]; i++)
+    for (u32 i = 0; current_dir.entries[i].filename[0]; i++)
     {
         char filename[13];
         for (u32 j = 0; j < 8; j++)
         {
-            if (current_dir[i].filename[j] == ' ')
+            if (current_dir.entries[i].filename[j] == ' ')
             {
                 filename[j] = '.';
                 j++;
                 for (u32 k = 0; k < 3; k++)
                 {
-                    if (current_dir[i].extension[k] == ' ')
+                    if (current_dir.entries[i].extension[k] == ' ')
                     {
                         filename[j] = '\0';
                         break;
                     }
-                    filename[j + k] = current_dir[i].extension[k];
+                    filename[j + k] = current_dir.entries[i].extension[k];
                 }
                 break;
             }
-            filename[j] = current_dir[i].filename[j];
+            filename[j] = current_dir.entries[i].filename[j];
         }
 
-        if (!(current_dir[i].flags & 0b10000) == !dir && !strcasecmp(entry_name, filename))
-            return &current_dir[i];
+        if (!(current_dir.entries[i].flags & 0b10000) == !dir && !strcasecmp(entry_name, filename))
+            return &current_dir.entries[i];
     }
     return NULLPTR;
 }
 
-fat32_entry_t *find_sub_directory(fat32_entry_t *current_dir, char *subdir_name)
+fat32_entry_t *find_sub_directory(fat32_directory_t current_dir, char *subdir_name)
 {
     return find_entry(current_dir, subdir_name, 1);
 }
 
 void *read_cluster(u32 drive_number, u32 cluster_number, u32 sector_count, void *buffer)
 {
-    printf("Reading %u sectors from cluster %u\n", sector_count, cluster_number);
+    // printf("Reading %u sectors from cluster %u\n", sector_count, cluster_number);
     u32 cluster_begin = last_header.reserved_sectors + (last_header.fat_copies * last_header.sectors_per_fat);
 
     u32 sector_number = cluster_begin + (cluster_number - 2) * last_header.sectors_per_cluster;
 
-    printf("Reading sector %u\n", sector_number);
+    // printf("Reading sector %u\n", sector_number);
     read_sectors_lba(drive_number, sector_number, sector_count, buffer);
 }
 
-void *read_file(u8 drive_number, fat32_entry_t *current_dir, char *file_name, u32 *size)
+void *read_file(u8 drive_number, fat32_directory_t current_dir, char *file_name, u32 *size)
 {
     if (!load_header(drive_number))
         return NULLPTR;
@@ -225,34 +250,32 @@ void *read_file(u8 drive_number, fat32_entry_t *current_dir, char *file_name, u3
     if (entry == NULLPTR)
         return NULLPTR;
     *size = entry->file_size;
+    printf("File size %u\n", *size);
 
     u32 cluster_number = get_cluster_number(entry);
     printf("Cluster %u\n", cluster_number);
 
-    u32 cluster_begin = last_header.reserved_sectors + (last_header.fat_copies * last_header.sectors_per_fat);
-
-    u32 sector_number = cluster_begin + (cluster_number - 2) * last_header.sectors_per_cluster;
-    printf("Sector %u\n", sector_number);
-
-    u64 alloc_size = *size - (*size % sizeof(lba_sector_t)) + sizeof(lba_sector_t);
+    u64 alloc_size = *size;
+    if (alloc_size % SECTOR_SIZE != 0)
+        alloc_size += SECTOR_SIZE - alloc_size % SECTOR_SIZE;
     printf("Alloc size %u\n", alloc_size);
 
-    u32 total_sectors = alloc_size / sizeof(lba_sector_t);
+    u32 total_sectors = alloc_size / SECTOR_SIZE;
     printf("Total sectors: %u\n", total_sectors);
 
     lba_sector_t *alloc = malloc(alloc_size);
 
     u64 offset = 0;
-    while (offset < total_sectors && cluster_number != 0xFFFFFFFF)
+    while (cluster_number != 0xFFFFFFF)
     {
         u32 sectors_in_cluster = last_header.sectors_per_cluster > 1 ? total_sectors - offset : 1;
         if (sectors_in_cluster > last_header.sectors_per_cluster)
             sectors_in_cluster = last_header.sectors_per_cluster;
 
         read_cluster(drive_number, cluster_number, sectors_in_cluster, alloc + offset);
-        if (cluster_number < (SECTORS_PER_FAT * SECTOR_SIZE))
+        if (cluster_number < FAT_ENTRIES)
         {
-            printf("FAT value at cluster %u: %u\n", cluster_number, fat_cache[cluster_number]);
+            // printf("FAT value at cluster %x: %x\n", cluster_number, fat_cache[cluster_number]);
             cluster_number = fat_cache[cluster_number];
         }
         else
@@ -261,8 +284,68 @@ void *read_file(u8 drive_number, fat32_entry_t *current_dir, char *file_name, u3
             panic(0);
         }
 
-        offset += 3;
+        offset++;
     }
 
     return alloc;
+}
+
+u32 find_spare_cluster(u8 drive_number)
+{
+    if (!load_header(drive_number))
+        return 0;
+    for (u32 i = 0; i < FAT_ENTRIES; i++)
+    {
+        if (fat_cache[i] == 0)
+            return i;
+    }
+}
+
+fat32_entry_t *find_spare_entry(fat32_entry_t *dir)
+{
+    for (u32 i = 0; i < DIR_ENTRIES_PER_SECTOR; i++)
+    {
+        if (dir[i].filename[0] = '\0')
+            return &dir[i];
+    }
+}
+
+u32 create_file(u8 drive_number, fat32_directory_t dir, char *name, char *ext, u32 file_size)
+{
+    if (!load_header(drive_number))
+        return 0;
+
+    u32 cluster = find_spare_cluster(drive_number);
+    printf("cluster: %u\n", cluster);
+    printf("new filename %s\n", name);
+
+    fat32_entry_t *new_entry = find_spare_entry(dir.entries);
+    u32 i;
+    for (i = 0; i < 8; i++)
+    {
+        if (name[i] = '\0')
+            break;
+        new_entry->filename[i] = name[i];
+    }
+    for (; i < 8; i++)
+        new_entry->filename[i] = ' ';
+
+    for (i = 0; i < 3; i++)
+    {
+        if (name[i] = '\0')
+            break;
+        new_entry->extension[i] = ext[i];
+    }
+    for (; i < 3; i++)
+        new_entry->extension[i] = ' ';
+
+    new_entry->first_cluster_high = cluster >> 16;
+    new_entry->first_cluster_low = (u16)cluster;
+    new_entry->file_size = file_size;
+
+    fat_cache[cluster] = 0xFFFFFFF;
+    printf("Saving FAT\n");
+    save_fat();
+    printf("Saving directory\n");
+    save_directory(dir);
 }

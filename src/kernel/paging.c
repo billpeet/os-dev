@@ -181,3 +181,11 @@ void unmap_page(void *virt_addr)
 
     flush_tlb();
 }
+
+void *allocate_page()
+{
+    u64 phys = (u64)allocate_frame();
+    u64 virt = phys;
+    map_page(phys, (void *)virt, 0b10);
+    return (void *)virt;
+}

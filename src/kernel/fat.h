@@ -47,11 +47,6 @@ typedef struct fat32_fs_info
     u32 trail_signature;
 } __attribute__((__packed__)) fat32_fs_info_t;
 
-typedef struct fat32_fat
-{
-    u8 entries[SECTOR_SIZE];
-} __attribute__((__packed__)) fat32_fat_t;
-
 typedef struct fat32_entry
 {
     u8 filename[8];
@@ -65,17 +60,26 @@ typedef struct fat32_entry
     u32 file_size;          // 0x1C (28)
 } __attribute__((__packed__)) fat32_entry_t;
 
+typedef struct fat32_directory
+{
+    u8 drive_number;
+    u32 cluster;
+    fat32_entry_t *entries;
+} fat32_directory_t;
+
 void get_header(u8 drive_number, fat32_boot_sector_t *header);
 
-fat32_entry_t *read_directory(u8 drive_number, int cluster_number);
-fat32_entry_t *read_root_directory(u8 drive_number);
+fat32_directory_t read_directory(u8 drive_number, int cluster_number);
+fat32_directory_t read_root_directory(u8 drive_number);
 
 u32 get_cluster_number(fat32_entry_t *f);
 
-void dump_directory(fat32_entry_t *dir);
+void dump_directory(fat32_directory_t dir);
 
-fat32_entry_t *find_sub_directory(fat32_entry_t *current_dir, char *subdir_name);
+fat32_entry_t *find_sub_directory(fat32_directory_t current_dir, char *subdir_name);
 
-void *read_file(u8 drive_number, fat32_entry_t *current_dir, char *file_name, u32 *size);
+void *read_file(u8 drive_number, fat32_directory_t current_dir, char *file_name, u32 *size);
+
+u32 create_file(u8 drive_number, fat32_directory_t dir, char *name, char *ext, u32 file_size);
 
 #endif
