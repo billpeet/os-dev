@@ -58,7 +58,18 @@ void kmain(boot_info_t *boot_info)
     yield();
     printf("returned to main task\n");
 
-    shell();
+    task_t shell_task;
+    create_task(&shell_task, shell, main_task.regs.flags, (void *)main_task.regs.cr3);
+    main_task.next = &shell_task;
+    shell_task.next = &main_task;
+
+    yield();
+
+    printf("main!\n");
+    // shell();
     while (1)
+    {
+        yield();
         hlt();
+    }
 }

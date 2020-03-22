@@ -10,6 +10,7 @@
 #define KERNEL_CODE_SEGMENT_OFFSET 0x08
 #ifdef __GNUC__
 #define INTERRUPT __attribute__((interrupt))
+#define EXCEPTION __attribute__((exception))
 #else
 #define INTERRUPT
 #endif
@@ -106,6 +107,10 @@ INTERRUPT void keyboard_handler(struct interrupt_frame *frame)
 INTERRUPT void breakpoint_handler(struct interrupt_frame *frame)
 {
     printf("Breakpoint!\n");
+    u64 rax;
+    asm volatile("mov %%rcx, %0"
+                 : "=r"(rax)::"rcx");
+    printf("rcx: %x\n", rax);
 }
 
 INTERRUPT void double_fault_handler(struct interrupt_frame *frame)
@@ -115,9 +120,10 @@ INTERRUPT void double_fault_handler(struct interrupt_frame *frame)
     asm("hlt");
 }
 
-INTERRUPT void page_fault_handler(struct interrupt_frame *frame, unsigned long error_code)
+INTERRUPT void page_fault_handler(exception_frame_t *frame, unsigned long long error_code)
 {
     printf("Page fault!\n");
+    printf("IP: 0x%x, SP: 0x%x\n", frame->instruction_pointer);
     if (error_code & 0b1)
         printf("Page protection violation\n");
     else

@@ -9,6 +9,7 @@
 #include "kernel.h"
 #include "lba.h"
 #include "fat.h"
+#include "task.h"
 
 char curr_cmd[100];
 char curr_param[100];
@@ -386,5 +387,8 @@ void shell(void)
     register_handler(shell_char);
 
     while (1)
+    {
+        yield();
         asm("hlt");
+    }
 }

@@ -7,6 +7,9 @@ global write_port
 global write_port_16
 global test_read
 global switch_task
+global some_func
+global print_task
+global save_task
 
 section .text
 
@@ -53,32 +56,50 @@ load_idt:
     sti
     ret
 
+some_func:
+    mov rcx, [rdi+6*8]
+    int3
+    ret
+
+
+print_task:
+    mov rax, rsp
+    mov rcx, rax
+    int3
+    ret
+
+save_task:
+    mov rax, rsp
+    add rax, 32             ; not sure why 32, but seems to work???
+    mov [rdi+6*8], rax
+    ret
+
 
 switch_task:
-    push rbx
-    push rsi
-    push rdi
-    push rbp
+    ; push rbx
+    ; push rsi
+    ; push rdi
+    ; push rbp
 
-    mov rdi, [rsp+(4+1)*8]  ; second argument - pointer to existing task
-    mov [rdi+6*8], rsp      ; save current rsp
-
-    mov rsi, [rsp+(4+2)*8]  ; second argument - pointer to new task
-
-    mov rsp, [rsi+7*8]      ; stack pointer
-    mov rax, [rsi+10*8]     ; CR3
-    ; mov rbx, [rsi+]
+    mov rsp, [rsi+6*8]      ; stack pointer
+    mov rax, [rsi+11*8]     ; CR3
     mov rcx, cr3
+    
     cmp rax, rcx            ; Has the virtual space changed? If not, don't bother setting CR3
     je .doneVAS
-    mov cr3, rax
+    ; mov cr3, rax
 
 .doneVAS:
 
-    pop rbp
-    pop rdi
-    pop rsi
-    pop rbx
+    ; pop rbp
+    ; pop rdi
+    ; pop rsi
+    ; pop rbx
+
+    ; mov rax, [rsi+8*8]     ; Load the return address into the new stack
+    ; mov [rsp], rax
+    ; mov rcx, [rsp]
+    ; int3
 
     ret
 
