@@ -388,7 +388,7 @@ void shell(void)
 
     while (1)
     {
-        yield();
+        // yield();
         asm("hlt");
     }
 }
