@@ -2,6 +2,7 @@
 #include "keyboard_map.h"
 #include "vga.h"
 #include "kernel.h"
+#include "x86.h"
 
 #define IDT_SIZE 256
 #define TASK_GATE 0x85
@@ -23,8 +24,6 @@ struct idt_pointer
 
 extern void load_idt(void);
 extern void *code_selector;
-
-struct interrupt_frame;
 
 struct IDT_entry
 {
@@ -69,15 +68,27 @@ void handler_complete()
     write_port(0x20, 0x20);
 }
 
-INTERRUPT void timer_handler(struct interrupt_frame *frame)
+INTERRUPT void timer_handler(interrupt_frame_t *frame)
 {
+    asm("cli");
     handler_complete();
+    asm("sti");
 }
 
-keyboardHandlerFn keyboardHandler;
+int_handler_t keyboardHandler;
 
-INTERRUPT void keyboard_handler(struct interrupt_frame *frame)
+INTERRUPT void keyboard_handler(interrupt_frame_t *frame)
 {
+    // Save running task's current stack pointer
+    asm("cli");
+    u64 rsp;
+    asm volatile("mov %%rsp, %%rax\n\rmov %%rax, %0"
+                 : "=m"(rsp)::"rax");
+    printf("rsp: %x\n", rsp);
+
+    printf("INTERRUPT: prev task %u, rip %p, rsp %p (prev rip %x, prev rsp %x)\n", running_task->id, frame->instruction_pointer, frame->stack_pointer, running_task->regs.rip, running_task->regs.rsp);
+
+    printf("\n");
     handler_complete();
 
     u16 status = read_port(KEYBOARD_STATUS_PORT);
@@ -97,14 +108,52 @@ INTERRUPT void keyboard_handler(struct interrupt_frame *frame)
         else
             c = keyboard_map[(unsigned char)keycode];
 
-        if (keyboardHandler)
-            keyboardHandler(c);
+        if (keyboardHandler.handler)
+        {
+            if (keyboardHandler.task != running_task)
+            {
+                // Need to switch tasks
+                keyboardHandler.task->next = running_task;
+                // printf("Switching from %u to %u due to interrupt\n", running_task->id, keyboardHandler.task->id);
+                setChar(running_task->id + 48, VGA_HEIGHT - 1, VGA_WIDTH - 1);
+                u64 prev_rip = running_task->regs.rip;
+                u64 prev_rsp = running_task->regs.rsp;
+                task_t *previous_task = running_task;
+                task_t new_task;
+                create_task(&new_task, &&back_again, previous_task->regs.flags, (u64 *)previous_task->regs.cr3);
+                new_task.regs.rsp = rsp;
+
+                running_task = keyboardHandler.task;
+                running_task->next = previous_task;
+                // running_task->next = &new_task;
+                running_task->regs.rip = (u64)keyboardHandler.handler;
+                running_task->regs.rsp -= 8;
+                previous_task->regs.rip = (u64) && back_again;
+                asm volatile("mov %0, %%rdi\n\t" ::"m"(c));
+                // switch_task(&previous_task->regs, &running_task->regs);
+            back_again:
+                printf("back again\n");
+                printf("Current task: %u\n", running_task->id);
+
+                // running_task->regs.rip = prev_rip;
+                // running_task->regs.rsp = prev_rsp;
+                // running_task->regs.rip = (u64)frame->instruction_pointer;
+                // running_task->regs.rsp = (u64)frame->stack_pointer;
+            }
+            else
+            {
+                // Invoke handler on running task
+                keyboardHandler.handler(c);
+            }
+        }
         else
             writeChar(c);
     }
+    printf("exiting keyboard handler\n");
+    asm("sti");
 }
 
-INTERRUPT void breakpoint_handler(struct interrupt_frame *frame)
+INTERRUPT void breakpoint_handler(interrupt_frame_t *frame)
 {
     printf("Breakpoint!\n");
     u64 rax;
@@ -113,14 +162,14 @@ INTERRUPT void breakpoint_handler(struct interrupt_frame *frame)
     printf("rcx: %x\n", rax);
 }
 
-INTERRUPT void double_fault_handler(struct interrupt_frame *frame)
+INTERRUPT void double_fault_handler(interrupt_frame_t *frame)
 {
     printf("PANIC: double fault!\n");
     printf("\nPress any key to continue...\n");
     asm("hlt");
 }
 
-INTERRUPT void page_fault_handler(exception_frame_t *frame, unsigned long long error_code)
+INTERRUPT void page_fault_handler(interrupt_frame_t *frame, unsigned long long error_code)
 {
     printf("Page fault!\n");
     printf("IP: 0x%x, SP: 0x%x\n", frame->instruction_pointer);
@@ -142,14 +191,15 @@ INTERRUPT void random_handler(struct interrupt_frame *frame)
     printf("interrupt!\n");
 }
 
-void register_handler(keyboardHandlerFn handler)
+void register_handler(int_handler_t handler)
 {
     keyboardHandler = handler;
 }
 
-void unregister_handler(keyboardHandlerFn handler)
+void unregister_handler(int_handler_t handler)
 {
-    keyboardHandler = 0;
+    keyboardHandler.task = NULLPTR;
+    keyboardHandler.handler = NULLPTR;
 }
 
 void setup_idt_entry(struct IDT_entry *entry, u64 handler_address, u16 options)
@@ -179,6 +229,6 @@ void init_interrupts()
     load_idt();
 
     // // Unmask interrupts 0 & 1
-    write_port(0x21, 0b11111100);
+    write_port(0x21, 0b11111101);
     write_port(0xA1, 0b11111111);
 }

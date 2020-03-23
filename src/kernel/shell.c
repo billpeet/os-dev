@@ -10,6 +10,7 @@
 #include "lba.h"
 #include "fat.h"
 #include "task.h"
+#include "x86.h"
 
 char curr_cmd[100];
 char curr_param[100];
@@ -18,6 +19,7 @@ u8 current_drive;
 fat32_directory_t current_dir;
 char current_dir_name[100] = "\\";
 char current_dir_str[100] = "C:\\";
+task_t shell_task;
 
 void shell_char(char c);
 
@@ -90,7 +92,7 @@ void shell_execute()
         printf("Starting pong:\n");
         pong();
         printf("done with pong\n");
-        register_handler(shell_char);
+        // register_handler(shell_char);
     }
     else if (!strcasecmp(curr_cmd, "clear"))
     {
@@ -377,6 +379,11 @@ void shell_char(char c)
         writeChar(c);
         curr_cmd[pos++] = c;
     }
+
+    printf("yielding again\n");
+    yield();
+    // printf("shell return from yield\n");
+    asm("hlt");
 }
 
 void shell(void)
@@ -384,11 +391,18 @@ void shell(void)
     change_drive(0);
 
     shell_line_init();
-    register_handler(shell_char);
+    int_handler_t handler;
+    handler.handler = shell_char;
+    handler.task = &shell_task;
+    register_handler(handler);
+    // printf("registered handler\n");
 
+    u64 i = 0;
     while (1)
     {
-        // yield();
+        yield();
+        writeChar('y');
         asm("hlt");
+        setChar((i++) + 48, VGA_HEIGHT - 1, 0);
     }
 }

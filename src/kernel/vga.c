@@ -44,15 +44,6 @@ void moveUp()
     current_pos -= VGA_WIDTH;
 }
 
-void writeStringAtPos(const char *str, int line, int pos)
-{
-    int initPos = line * VGA_WIDTH + pos;
-    for (int i = 0; str[i] != '\0'; i++)
-    {
-        setCharAtPos(str[i], initPos + i);
-    }
-}
-
 void writeChar(char c)
 {
     if (c == '\n')
@@ -154,21 +145,6 @@ void writeNewLine()
     writeChar('\n');
 }
 
-void writeStrInt(const char *str, u64 i)
-{
-    writeString(str);
-    writeInt(i);
-    writeNewLine();
-}
-
-void writeStrHexInt(const char *str, u64 i)
-{
-    writeString(str);
-    writeString("0x");
-    writeHexInt(i);
-    writeNewLine();
-}
-
 void printf(const char *fmt, ...)
 {
     va_list args;
@@ -182,22 +158,29 @@ void printf(const char *fmt, ...)
             {
             case 'd':
             case 'i':
+                // signed int
                 writeSInt(va_arg(args, long));
                 break;
             case 'u':
+            case 'f':
+                // unsigned int
                 writeInt(va_arg(args, u64));
                 break;
             case 'x':
             case 'X':
+                // hex
                 writeHexInt(va_arg(args, u64));
                 break;
             case 'c':
+                // char
                 writeChar(va_arg(args, int));
                 break;
             case 's':
+                // string
                 writeString(va_arg(args, char *));
                 break;
             case 'p':
+                // pointer address
                 writeHexInt((u64)va_arg(args, void *));
                 break;
             default:

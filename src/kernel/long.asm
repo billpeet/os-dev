@@ -81,9 +81,8 @@ switch_task:
     ; push rdi
     ; push rbp
 
-    mov rsp, [rsi+6*8]      ; stack pointer
+    mov rsp, [rsi+6*8]      ; set stack pointer - return address should be already configured at [rsp]
     mov rax, [rsi+11*8]     ; CR3
-    mov rcx, cr3
     
     cmp rax, rcx            ; Has the virtual space changed? If not, don't bother setting CR3
     je .doneVAS
@@ -96,10 +95,11 @@ switch_task:
     ; pop rsi
     ; pop rbx
 
-    ; mov rax, [rsi+8*8]     ; Load the return address into the new stack
-    ; mov [rsp], rax
+    mov rax, [rsi+8*8]     ; Load the return address into the new stack
+    mov [rsp], rax
     ; mov rcx, [rsp]
     ; int3
+
 
     ret
 

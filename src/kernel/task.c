@@ -1,6 +1,7 @@
 #include "task.h"
 #include "paging.h"
 #include "vga.h"
+#include "x86.h"
 
 task_t *running_task;
 task_t main_task;
@@ -14,12 +15,14 @@ static void other_main()
     printf("In other task\n");
     printf("Switching back to main\n");
     yield();
+    asm("hlt");
 }
 
 static void other_main2()
 {
     printf("task2\n");
     yield();
+    asm("hlt");
 }
 
 void create_task(task_t *task, void (*main)(), u64 flags, u64 *pagedir)
@@ -48,12 +51,10 @@ void init_tasking()
                  : "=m"(main_task.regs.flags)::"rax");
     printf("cr3: %x, flags: %x\n", main_task.regs.cr3, main_task.regs.flags);
     create_task(&task1, other_main, main_task.regs.flags, (u64 *)main_task.regs.cr3);
-    create_task(&task2, other_main2, main_task.regs.flags, (u64 *)main_task.regs.cr3);
+    // create_task(&task2, other_main2, main_task.regs.flags, (u64 *)main_task.regs.cr3);
     // main_task.regs.rip = (u64)other_main2;
-    main_task.id = 1;
     main_task.next = &task1;
     task1.next = &main_task;
-    task1.id = 2;
     // task2.next = &task1;
     // task2.id = 3;
 
@@ -70,15 +71,13 @@ void dump_task(task_t *t)
            t->regs.rax, t->regs.flags, t->regs.rip, t->regs.cr3, t->regs.rsp);
 }
 
-void yield()
+__attribute__((naked)) void yield()
 {
-    extern void save_task(task_t * t);
-    save_task(running_task);
-    u64 rip;
+    save_rsp(running_task);
     task_t *last = running_task;
     running_task = running_task->next;
-    printf("switching from %u to %u: last=%p, run=%p, run addr %p\n", last->id, running_task->id, &last->regs, &running_task->regs, running_task->regs.rip);
-
+    printf("switching from %u to %u: run addr %p\n", last->id, running_task->id, running_task->regs.rip);
+    setChar(running_task->id + 48, VGA_HEIGHT - 1, VGA_WIDTH - 1);
     // if (running_task->next != NULLPTR)
     // {
     switch_task(&last->regs, &running_task->regs);

@@ -9,6 +9,7 @@
 #include "alloc.h"
 #include "lba.h"
 #include "task.h"
+#include "x86.h"
 
 extern u16 code_selector;
 
@@ -54,22 +55,35 @@ void kmain(boot_info_t *boot_info)
 
     init_tasking();
 
-    printf("Switching...\n");
+    printf("Switching to task 1\n");
+    // extern void print_task();
+    // printf("Current rsp: \n");
+    // print_task();
+    // save_rsp(running_task);
+    // u64 *ptr = (u64 *)running_task->regs.rsp;
+    // printf("rip: %x\n", ptr[0]);
+    u64 rip;
+    asm volatile(
+        "lea 0(%%rip), %0\n\t"
+        : "=r"(rip)::);
+    printf("rip: %x\n", rip);
     yield();
     printf("returned to main task\n");
 
-    task_t shell_task;
     create_task(&shell_task, shell, main_task.regs.flags, (void *)main_task.regs.cr3);
     main_task.next = &shell_task;
     shell_task.next = &main_task;
 
+    printf("switching to shell!\n");
     yield();
 
-    printf("main!\n");
+    // shell();
+
     // shell();
     while (1)
     {
-        yield();
-        hlt();
+        // yield();
+        printf("x");
+        asm("hlt");
     }
 }

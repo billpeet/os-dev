@@ -1,6 +1,6 @@
 ASM=nasm
 CC=~/opt/cross/bin/x86_64-elf-gcc
-CFLAGS=-fno-stack-protector -mgeneral-regs-only -nostdlib -nodefaultlibs -ffreestanding -mno-red-zone -Isrc/libc/include
+CFLAGS=-fno-stack-protector -mgeneral-regs-only -nostdlib -nodefaultlibs -ffreestanding -mno-red-zone -Isrc/libc/include -ggdb
 LD=ld
 SRCDIR=src
 OBJDIR=obj
@@ -10,6 +10,9 @@ KERNELOBJ=$(patsubst $(SRCDIR)/kernel/%.c,$(OBJDIR)/kernel/%.o,$(CFILES))
 LIBCOBJ=$(patsubst $(SRCDIR)/libc/%.c,$(OBJDIR)/libc/%.o,$(LIBCFILES))
 
 all: os.iso fat.img
+
+debug: all
+	qemu-system-x86_64 -cdrom os.iso -hda fat.img -boot d -s -S
 
 run: all
 	qemu-system-x86_64 -cdrom os.iso -hda fat.img -boot d
@@ -26,7 +29,7 @@ fat.img: hdfiles/*
 isofiles/boot/kernel.bin: $(OBJDIR)/kernel/kasm.o $(OBJDIR)/kernel/long.o $(KERNELOBJ) $(LIBCOBJ)
 	$(LD) -n -T link.ld -o isofiles/boot/kernel.bin $(OBJDIR)/kernel/kasm.o $(OBJDIR)/kernel/long.o $(KERNELOBJ) $(LIBCOBJ)
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.c
+$(OBJDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/kernel/x86.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 $(OBJDIR)/kernel/kasm.o: $(SRCDIR)/kernel/kernel.asm
