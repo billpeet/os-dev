@@ -22,7 +22,6 @@ struct idt_pointer
     u64 base;
 } __attribute((packed));
 
-extern void load_idt(void);
 extern void *code_selector;
 
 struct IDT_entry
@@ -42,30 +41,30 @@ void init_pic()
 {
     // INIT PIC1 & PIC2
     // ICW1 - begin init
-    write_port(0x20, 0x11);
-    write_port(0xA0, 0x11);
+    outb(0x20, 0x11);
+    outb(0xA0, 0x11);
 
     // ICW2 - remap offset address of IDT
     // Must be beyond 0x20 because first 32 interrupts are reserved for CPU exceptions
-    write_port(0x21, 0x20);
-    write_port(0xA1, 0x28);
+    outb(0x21, 0x20);
+    outb(0xA1, 0x28);
 
     // ICW3 - no cascading
-    write_port(0x21, 0x04);
-    write_port(0xA1, 0x02);
+    outb(0x21, 0x04);
+    outb(0xA1, 0x02);
 
     // ICW4 - environment info (0x01 means 80x86 mode)
-    write_port(0x21, 0x01);
-    write_port(0xA1, 0x01);
+    outb(0x21, 0x01);
+    outb(0xA1, 0x01);
 
     // Mask interrupts
-    write_port(0x21, 0xff);
-    write_port(0xA1, 0xff);
+    outb(0x21, 0xff);
+    outb(0xA1, 0xff);
 }
 
 void handler_complete()
 {
-    write_port(0x20, 0x20);
+    outb(0x20, 0x20);
 }
 
 int_handler_t tm_handlers[100];
@@ -139,12 +138,12 @@ INTERRUPT void keyboard_handler(interrupt_frame_t *frame)
     printf("previous task taskid=%u, ptr=%p ptrptr=%p\n", previous_task->id, previous_task, &previous_task);
     handler_complete();
 
-    u16 status = read_port(KEYBOARD_STATUS_PORT);
+    u16 status = inb(KEYBOARD_STATUS_PORT);
 
     if (status & 0x01)
     {
 
-        char keycode = read_port(KEYBOARD_DATA_PORT);
+        char keycode = inb(KEYBOARD_DATA_PORT);
 
         if (keycode < 0)
             return;
@@ -181,13 +180,17 @@ INTERRUPT void keyboard_handler(interrupt_frame_t *frame)
 
                 create_task_with_stack(&new_task, &&back_again, previous_task->regs.flags, (u64 *)previous_task->regs.cr3, rbp, rsp - 8);
 
-                printf("current rsp %x, previous task taskid=%u, ptr=%p ptrptr=%p\n", rsp, previous_task->id, previous_task, &previous_task);
+                // printf("current rsp %x, previous task taskid=%u, ptr=%p ptrptr=%p, frame rip %p\n", rsp, previous_task->id, previous_task, &previous_task, frame->rip);
+                // printf("frame ptr %p, value %p, rip ptr %p, value %p\n", &frame, frame, &frame->rip, frame->rip);
+                printf("value at 0x44ffc8: 0x%x\n", *((u64 *)0x44ffc8));
                 switch_task(&previous_task->regs, &running_task->regs);
             back_again:
                 // asm volatile("pop %rax\n\t");
                 // asm volatile("pop %rax\n\t");
-                printf("current rsp %x, previous task taskid=%u, ptr=%p ptrptr=%p\n", rsp, previous_task->id, previous_task, &previous_task);
-                printf("back again\n");
+                // printf("current rsp %x, previous task taskid=%u, ptr=%p ptrptr=%p, frame rip %p\n", rsp, previous_task->id, previous_task, &previous_task, &frame->rip);
+                // printf("frame ptr %p, value %p, rip ptr %p, value %p\n", &frame, frame, &frame->rip, frame->rip);
+                printf("value at 0x44ffc8: 0x%x\n", *((u64 *)0x44ffc8));
+                // printf("back again\n");
                 kb_handlers[i].task->next = old_next;
             }
         }
@@ -321,9 +324,9 @@ void init_interrupts()
     setup_idt_entry(&idt[33], (u64)keyboard_handler, options_present);                 // Keyboard interrupt
 
     setup_idt_entry(&idt[49], (u64)random_handler, options_present);
-    load_idt();
+    lidt();
 
     // // Unmask interrupts 0 & 1
-    write_port(0x21, 0b11111100);
-    write_port(0xA1, 0b11111111);
+    outb(0x21, 0b11111100);
+    outb(0xA1, 0b11111111);
 }

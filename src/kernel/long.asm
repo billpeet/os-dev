@@ -1,14 +1,7 @@
 global long_mode_start
 global idt
 global idtr
-global load_idt
-global read_port
-global write_port
-global write_port_16
-global test_read
 global switch_task
-global some_func
-global print_task
 global save_task
 
 section .text
@@ -34,39 +27,6 @@ long_mode_start:    ; start of long mode
     jmp kmain       ; jump to kmain in kernel.c
     ret
 
-read_port:
-    mov rdx, rdi
-    in ax, dx
-    ret
-
-write_port:
-    mov rdx, rdi
-    mov rax, rsi
-    out dx, al
-    ret
-
-write_port_16:
-    mov rdx, rdi
-    mov rax, rsi
-    out dx, ax
-    ret
-
-load_idt:
-    lidt [idtr]
-    sti
-    ret
-
-some_func:
-    mov rcx, [rdi+6*8]
-    int3
-    ret
-
-
-print_task:
-    mov rax, rsp
-    mov rcx, rax
-    int3
-    ret
 
 save_task:
     mov rax, rsp

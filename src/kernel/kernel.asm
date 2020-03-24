@@ -16,7 +16,6 @@ section .text
 
 global start
 global read_port
-global write_port
 global code_selector
 
 extern long_mode_start

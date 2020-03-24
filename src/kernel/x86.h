@@ -18,3 +18,21 @@ __attribute__((always_inline)) static inline void save_rsp(task_t *task)
     // task->regs.rip = *rsp;
     // printf("rip: 0x%x\n", task->regs.rip);
 }
+
+// Loads IDT
+__attribute__((always_inline)) static inline void lidt()
+{
+    asm volatile("lidt [idtr]");
+}
+
+// Disables interrupts
+__attribute__((always_inline)) static inline void cli()
+{
+    asm volatile("cli");
+}
+
+// Enables interrupts
+__attribute__((always_inline)) static inline void sti()
+{
+    asm volatile("sti");
+}

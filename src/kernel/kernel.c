@@ -32,12 +32,12 @@ void reboot()
     asm volatile("cli");
     do
     {
-        temp = read_port(KEYBOARD_STATUS_PORT);
+        temp = inb(KEYBOARD_STATUS_PORT);
         if (temp & 0b10)
-            read_port(KEYBOARD_DATA_PORT);
+            inb(KEYBOARD_DATA_PORT);
     } while (temp & 1);
 
-    write_port(KEYBOARD_STATUS_PORT, 0xFE);
+    outb(KEYBOARD_STATUS_PORT, 0xFE);
 loop:
     asm volatile("hlt");
     goto loop;

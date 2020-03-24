@@ -26,7 +26,7 @@ void dump_sector(lba_sector_t *sector)
 int lba_delay()
 {
     for (u8 i = 0; i < 5; i++)
-        read_port(0x1f7);
+        inb(0x1f7);
 }
 
 int lba_wait()
@@ -76,13 +76,13 @@ void read_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, lba_sect
     outb(base + 6, CMD_MASTER | (sector_number >> 24));
     lba_wait();
 
-    write_port(base + 1, 0x00);
-    write_port(base + 2, sector_count);
-    write_port(base + 3, (u8)(sector_number));
-    write_port(base + 4, (u8)(sector_number >> 8));
-    write_port(base + 5, (u8)(sector_number >> 16));
-    write_port(base + 6, ((sector_number >> 24) & 0x0F) | drive);
-    write_port(base + 7, CMD_READ);
+    outb(base + 1, 0x00);
+    outb(base + 2, sector_count);
+    outb(base + 3, (u8)(sector_number));
+    outb(base + 4, (u8)(sector_number >> 8));
+    outb(base + 5, (u8)(sector_number >> 16));
+    outb(base + 6, ((sector_number >> 24) & 0x0F) | drive);
+    outb(base + 7, CMD_READ);
 
     lba_wait();
 
@@ -129,13 +129,13 @@ void write_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, lba_sec
     }
 
     outb(base + 6, CMD_MASTER);
-    write_port(base + 1, 0x00);
-    write_port(base + 2, sector_count);
-    write_port(base + 3, (u8)(sector_number & 0xff));
-    write_port(base + 4, (u8)(sector_number & 0xff00) >> 8);
-    write_port(base + 5, (u8)(sector_number & 0xff0000) >> 16);
-    write_port(base + 6, ((sector_number >> 24) & 0x0F) | drive);
-    write_port(base + 7, CMD_WRITE);
+    outb(base + 1, 0x00);
+    outb(base + 2, sector_count);
+    outb(base + 3, (u8)(sector_number & 0xff));
+    outb(base + 4, (u8)(sector_number & 0xff00) >> 8);
+    outb(base + 5, (u8)(sector_number & 0xff0000) >> 16);
+    outb(base + 6, ((sector_number >> 24) & 0x0F) | drive);
+    outb(base + 7, CMD_WRITE);
 
     lba_wait();
 
