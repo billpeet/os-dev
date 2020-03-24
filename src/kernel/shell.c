@@ -11,7 +11,9 @@
 #include "fat.h"
 #include "task.h"
 #include "x86.h"
+#include <stdbool.h>
 
+int_handler_t handler;
 char curr_cmd[100];
 char curr_param[100];
 int pos;
@@ -20,8 +22,9 @@ fat32_directory_t current_dir;
 char current_dir_name[100] = "\\";
 char current_dir_str[100] = "C:\\";
 task_t shell_task;
+bool cmd_in_progress;
 
-void shell_char(char c);
+void shell_char();
 
 int starts_with(char *input, char const *check)
 {
@@ -90,7 +93,10 @@ void shell_execute()
     if (!strcasecmp(curr_cmd, "pong"))
     {
         printf("Starting pong:\n");
+        // unregister_handler(handler);
+        cmd_in_progress = true;
         pong();
+        cmd_in_progress = false;
         printf("done with pong\n");
         // register_handler(shell_char);
     }
@@ -362,27 +368,35 @@ void shell_execute()
     shell_line_init();
 }
 
-void shell_char(char c)
+void shell_char()
 {
-    if (c == '\b')
-    {
-        if (pos > 0)
-        {
-            curr_cmd[--pos] = '\0';
-            writeChar(c);
-        }
-    }
-    else if (c == '\n')
-        shell_execute();
-    else
-    {
-        writeChar(c);
-        curr_cmd[pos++] = c;
-    }
+    // u64 rsp;
+    // asm volatile("mov %%rsp, %%rax\n\tmov %%rax, %0"
+    //              : "=m"(rsp)::"rax");
+    // printf("rsp in shell_char: %x\n", rsp);
+    // if (!cmd_in_progress)
+    // {
 
-    printf("yielding again\n");
-    yield();
-    // printf("shell return from yield\n");
+    //     char c = last_char;
+    //     if (c == '\b')
+    //     {
+    //         if (pos > 0)
+    //         {
+    //             curr_cmd[--pos] = '\0';
+    //             writeChar(c);
+    //         }
+    //     }
+    //     else if (c == '\n')
+    //         shell_execute();
+    //     else
+    //     {
+    //         writeChar(c);
+    //         curr_cmd[pos++] = c;
+    //     }
+    // }
+
+    // printf("Yielding back from shell\n");
+    yield_nosave();
     asm("hlt");
 }
 
@@ -391,18 +405,17 @@ void shell(void)
     change_drive(0);
 
     shell_line_init();
-    int_handler_t handler;
     handler.handler = shell_char;
     handler.task = &shell_task;
-    register_handler(handler);
+    register_kbhandler(handler);
     // printf("registered handler\n");
 
     u64 i = 0;
+    // yield();
     while (1)
     {
-        yield();
-        writeChar('y');
+        // yield();
+        // printf("y");
         asm("hlt");
-        setChar((i++) + 48, VGA_HEIGHT - 1, 0);
     }
 }

@@ -5,6 +5,8 @@
 
 #define VGA_MAX VGA_WIDTH *VGA_HEIGHT
 
+char virt_vga[VGA_MAX];
+
 int current_pos = 0;
 
 void setCharAtPos(const char c, int pos)
@@ -14,15 +16,29 @@ void setCharAtPos(const char c, int pos)
     vidptr[pos * 2 + 1] = 0x07;
 }
 
+void setCharAtPos_save(const char c, int pos)
+{
+    char *vidptr = (char *)0xb8000;
+    vidptr[pos * 2] = c;
+    virt_vga[pos * 2] = c;
+    vidptr[pos * 2 + 1] = 0x07;
+    virt_vga[pos * 2 + 1] = 0x07;
+}
+
 void setChar(const char c, int line, int pos)
 {
     setCharAtPos(c, (line * VGA_WIDTH) + pos);
 }
 
+void setChar_save(const char c, int line, int pos)
+{
+    setCharAtPos_save(c, (line * VGA_WIDTH) + pos);
+}
+
 void clearScreen()
 {
     for (int i = 0; i < VGA_MAX; i++)
-        setCharAtPos(' ', i);
+        setCharAtPos_save(' ', i);
     current_pos = 0;
 }
 
@@ -35,13 +51,25 @@ void moveUp()
         {
             int prevPos = ((i - 1) * VGA_WIDTH) + j;
             int pos = (i * VGA_WIDTH) + j;
-            vidptr[prevPos * 2] = vidptr[pos * 2];
-            vidptr[prevPos * 2 + 1] = vidptr[pos * 2 + 1];
+            virt_vga[prevPos * 2] = virt_vga[pos * 2];
+            vidptr[prevPos * 2] = virt_vga[prevPos * 2];
+            virt_vga[prevPos * 2 + 1] = virt_vga[pos * 2 + 1];
+            vidptr[prevPos * 2 + 1] = virt_vga[prevPos * 2 + 1];
 
-            setChar(' ', i, j); // Clear last line
+            setChar_save(' ', i, j); // Clear last line
         }
     }
     current_pos -= VGA_WIDTH;
+}
+
+void writeStatus(char const *str)
+{
+    for (int i = 0; i < VGA_WIDTH - 5; i++)
+    {
+        if (str[i] == '\0')
+            break;
+        setChar(str[i], VGA_HEIGHT - 1, i);
+    }
 }
 
 void writeChar(char c)
@@ -58,13 +86,13 @@ void writeChar(char c)
     }
     else if (c == '\b')
     {
-        setCharAtPos(' ', --current_pos);
+        setCharAtPos_save(' ', --current_pos);
     }
     else
     {
         if (current_pos >= VGA_MAX)
             moveUp();
-        setCharAtPos(c, current_pos++);
+        setCharAtPos_save(c, current_pos++);
     }
 }
 

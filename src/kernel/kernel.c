@@ -43,6 +43,14 @@ loop:
     goto loop;
 }
 
+static void other_main()
+{
+    printf("In other task\n");
+    printf("Switching back to main\n");
+    yield();
+    asm("hlt");
+}
+
 void kmain(boot_info_t *boot_info)
 {
     clearScreen();
@@ -55,24 +63,17 @@ void kmain(boot_info_t *boot_info)
 
     init_tasking();
 
+    task_t task1;
+    create_task(&task1, other_main, main_task.regs.flags, (u64 *)main_task.regs.cr3);
+    schedule_task(&task1);
+
     printf("Switching to task 1\n");
-    // extern void print_task();
-    // printf("Current rsp: \n");
-    // print_task();
-    // save_rsp(running_task);
-    // u64 *ptr = (u64 *)running_task->regs.rsp;
-    // printf("rip: %x\n", ptr[0]);
-    u64 rip;
-    asm volatile(
-        "lea 0(%%rip), %0\n\t"
-        : "=r"(rip)::);
-    printf("rip: %x\n", rip);
     yield();
     printf("returned to main task\n");
 
+    unschedule_task(&task1);
     create_task(&shell_task, shell, main_task.regs.flags, (void *)main_task.regs.cr3);
-    main_task.next = &shell_task;
-    shell_task.next = &main_task;
+    schedule_task(&shell_task);
 
     printf("switching to shell!\n");
     yield();
@@ -83,7 +84,7 @@ void kmain(boot_info_t *boot_info)
     while (1)
     {
         // yield();
-        printf("x");
+        // printf("x");
         asm("hlt");
     }
 }

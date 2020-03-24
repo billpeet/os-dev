@@ -9,24 +9,26 @@
 
 void init_interrupts(void);
 
-typedef void (*keyboardHandlerFn)(char c);
-
 typedef struct int_handler
 {
     task_t *task;
-    keyboardHandlerFn handler;
+    void (*handler)(void);
 } int_handler_t;
 
 typedef struct interrupt_frame
 {
-    u64 *instruction_pointer;
+    u64 *rip;
     u64 code_segment;
-    u64 cpu_flags;
-    u64 *stack_pointer;
+    u64 flags;
+    u64 *rsp;
     u64 stack_segment;
 } interrupt_frame_t;
 
-void register_handler(int_handler_t handler);
-void unregister_handler(int_handler_t handler);
+int register_kbhandler(int_handler_t handler);
+void unregister_kbhandler(int_handler_t handler);
+int register_tmhandler(int_handler_t handler);
+void unregister_tmhandler(int_handler_t handler);
+
+extern char last_char;
 
 #endif

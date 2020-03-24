@@ -13,5 +13,6 @@ void clearScreen();
 void writeChar(char c);
 void writeNewLine();
 void printf(const char *fmt, ...);
+void writeStatus(char const *str);
 
 #endif
