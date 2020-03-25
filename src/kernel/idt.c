@@ -24,7 +24,7 @@ struct idt_pointer
 
 extern void *code_selector;
 
-struct IDT_entry
+typedef struct IDT_entry
 {
     u16 offset_lowerbits;
     u16 selector;
@@ -32,10 +32,9 @@ struct IDT_entry
     u16 offset_middlebits;
     u32 offset_higherbits;
     u32 reserved;
-} __attribute((packed));
+} __attribute((packed)) IDT_entry_t;
 
-// struct IDT_entry IDT[IDT_SIZE] __attribute((aligned(4)));
-extern struct IDT_entry idt[IDT_SIZE];
+IDT_entry_t idt[IDT_SIZE] __attribute((aligned(4)));
 
 void init_pic()
 {
@@ -71,15 +70,39 @@ int_handler_t tm_handlers[100];
 
 INTERRUPT void timer_handler(interrupt_frame_t *frame)
 {
-    asm("cli");
+    cli();
     // Save running task's current stack pointer
-    task_t *previous_task = running_task;
-    u64 rsp, rbp;
-    asm volatile("mov %%rsp, %%rax\n\rmov %%rax, %0"
-                 : "=m"(rsp)::"rax");
-    asm volatile("mov %%rbp, %%rax\n\rmov %%rax, %0"
-                 : "=m"(rbp)::"rax");
+    // task_t *previous_task = running_task;
+    // previous_task->regs.rsp = frame->rsp;
+    // previous_task->regs.rip = frame->rip;
+    // u64 rsp, rbp;
+    // asm volatile("mov %%rsp, %%rax\n\rmov %%rax, %0"
+    //              : "=m"(rsp)::"rax");
+    // asm volatile("mov %%rbp, %%rax\n\rmov %%rax, %0"
+    //              : "=m"(rbp)::"rax");
     handler_complete();
+
+    static u64 i = 0;
+    i++;
+
+    if (i % 10 == 0 && running_task != &main_task)
+    {
+        // Time's up for the current task - jump back to scheduler
+        // Save current task
+        printf("Forcing task %u to yield\n", running_task->id);
+        running_task->regs.rip = frame->rip;
+        u64 *old_stack = (u64 *)(frame->rsp - 8);
+        *old_stack = frame->rip;
+        running_task->regs.rsp = (u64)old_stack;
+        asm volatile("mov %%rbp, %0"
+                     : "=r"(running_task->regs.rbp));
+        printf("Setting rtnaddr to 0x%x (at 0x%p)\n", *old_stack, old_stack);
+
+        running_task = &main_task;
+        frame->rip = running_task->regs.rip;
+        frame->rsp = running_task->regs.rsp;
+        frame->flags = running_task->regs.flags;
+    }
 
     // for (u32 i = 0; i < 100; i++)
     // {
@@ -101,9 +124,6 @@ INTERRUPT void timer_handler(interrupt_frame_t *frame)
     //     }
     // }
 
-    static u64 i = 0;
-    i++;
-
     // if (i % 40 == 0)
     // if (i == 10 || i == 20)
     // {
@@ -122,7 +142,7 @@ INTERRUPT void timer_handler(interrupt_frame_t *frame)
     //     }
     // }
 
-    asm("sti");
+    sti();
 }
 
 int_handler_t kb_handlers[100];
@@ -131,11 +151,11 @@ char last_char;
 
 INTERRUPT void keyboard_handler(interrupt_frame_t *frame)
 {
-    asm("cli");
-    printf("Frame addr %p pointer addr (%p) jumping to rsp %p, rip %p\n", frame, &frame, frame->rsp, frame->rip);
+    cli();
+    // printf("Frame addr %p pointer addr (%p) jumping to rsp %p, rip %p\n", frame, &frame, frame->rsp, frame->rip);
     // Save running task's current stack pointer
-    task_t *previous_task = running_task;
-    printf("previous task taskid=%u, ptr=%p ptrptr=%p\n", previous_task->id, previous_task, &previous_task);
+    // task_t *previous_task = running_task;
+    // printf("previous task taskid=%u, ptr=%p ptrptr=%p\n", previous_task->id, previous_task, &previous_task);
     handler_complete();
 
     u16 status = inb(KEYBOARD_STATUS_PORT);
@@ -155,50 +175,53 @@ INTERRUPT void keyboard_handler(interrupt_frame_t *frame)
         else
             c = keyboard_map[(u8)keycode];
 
-        for (u32 i = 0; i < 100; i++)
-        {
-            if (kb_handlers[i].handler)
-            {
-                task_t *old_next = kb_handlers[i].task->next;
-                kb_handlers[i].task->next = running_task;
-                display_current_task();
-                task_t new_task;
+        writeChar(c);
 
-                running_task = kb_handlers[i].task;
-                running_task->next = &new_task;
-                running_task->regs.rip = (u64)kb_handlers[i].handler;
-                printf("rip is now %x\n", running_task->regs.rip);
-                running_task->regs.rsp -= 8;
-                asm volatile("mov %0, %%rdi\n\t" ::"m"(c));
-                last_char = c;
+        // for (u32 i = 0; i < 100; i++)
+        // {
+        //     if (kb_handlers[i].handler)
+        //     {
 
-                u64 rsp, rbp;
-                asm volatile("mov %%rsp, %%rax\n\rmov %%rax, %0"
-                             : "=m"(rsp)::"rax");
-                asm volatile("mov %%rbp, %%rax\n\rmov %%rax, %0"
-                             : "=m"(rbp)::"rax");
+        //         //     task_t *old_next = kb_handlers[i].task->next;
+        //         //     kb_handlers[i].task->next = running_task;
+        //         //     display_current_task();
+        //         //     task_t new_task;
 
-                create_task_with_stack(&new_task, &&back_again, previous_task->regs.flags, (u64 *)previous_task->regs.cr3, rbp, rsp - 8);
+        //         //     running_task = kb_handlers[i].task;
+        //         //     running_task->next = &new_task;
+        //         //     running_task->regs.rip = (u64)kb_handlers[i].handler;
+        //         //     printf("rip is now %x\n", running_task->regs.rip);
+        //         //     running_task->regs.rsp -= 8;
+        //         //     asm volatile("mov %0, %%rdi\n\t" ::"m"(c));
+        //         //     last_char = c;
 
-                // printf("current rsp %x, previous task taskid=%u, ptr=%p ptrptr=%p, frame rip %p\n", rsp, previous_task->id, previous_task, &previous_task, frame->rip);
-                // printf("frame ptr %p, value %p, rip ptr %p, value %p\n", &frame, frame, &frame->rip, frame->rip);
-                printf("value at 0x44ffc8: 0x%x\n", *((u64 *)0x44ffc8));
-                switch_task(&previous_task->regs, &running_task->regs);
-            back_again:
-                // asm volatile("pop %rax\n\t");
-                // asm volatile("pop %rax\n\t");
-                // printf("current rsp %x, previous task taskid=%u, ptr=%p ptrptr=%p, frame rip %p\n", rsp, previous_task->id, previous_task, &previous_task, &frame->rip);
-                // printf("frame ptr %p, value %p, rip ptr %p, value %p\n", &frame, frame, &frame->rip, frame->rip);
-                printf("value at 0x44ffc8: 0x%x\n", *((u64 *)0x44ffc8));
-                // printf("back again\n");
-                kb_handlers[i].task->next = old_next;
-            }
-        }
+        //         //     u64 rsp, rbp;
+        //         //     asm volatile("mov %%rsp, %%rax\n\rmov %%rax, %0"
+        //         //                  : "=m"(rsp)::"rax");
+        //         //     asm volatile("mov %%rbp, %%rax\n\rmov %%rax, %0"
+        //         //                  : "=m"(rbp)::"rax");
+
+        //         //     create_task_with_stack(&new_task, &&back_again, previous_task->regs.flags, (u64 *)previous_task->regs.cr3, rbp, rsp - 8);
+
+        //         //     // printf("current rsp %x, previous task taskid=%u, ptr=%p ptrptr=%p, frame rip %p\n", rsp, previous_task->id, previous_task, &previous_task, frame->rip);
+        //         //     // printf("frame ptr %p, value %p, rip ptr %p, value %p\n", &frame, frame, &frame->rip, frame->rip);
+        //         //     printf("value at 0x44ffc8: 0x%x\n", *((u64 *)0x44ffc8));
+        //         //     switch_task(&previous_task->regs, &running_task->regs);
+        //         // back_again:
+        //         //     // asm volatile("pop %rax\n\t");
+        //         //     // asm volatile("pop %rax\n\t");
+        //         //     // printf("current rsp %x, previous task taskid=%u, ptr=%p ptrptr=%p, frame rip %p\n", rsp, previous_task->id, previous_task, &previous_task, &frame->rip);
+        //         //     // printf("frame ptr %p, value %p, rip ptr %p, value %p\n", &frame, frame, &frame->rip, frame->rip);
+        //         //     printf("value at 0x44ffc8: 0x%x\n", *((u64 *)0x44ffc8));
+        //         //     // printf("back again\n");
+        //         //     kb_handlers[i].task->next = old_next;
+        //     }
+        // }
     }
-    running_task = previous_task;
-    display_current_task();
-    printf("Frame addr %p pointer addr (%p) jumping to rsp %p, rip %p\n", frame, &frame, frame->rsp, frame->rip);
-    asm("sti");
+    // running_task = previous_task;
+    // display_current_task();
+    // printf("Frame addr %p pointer addr (%p) jumping to rsp %p, rip %p\n", frame, &frame, frame->rsp, frame->rip);
+    sti();
 }
 
 INTERRUPT void breakpoint_handler(interrupt_frame_t *frame)
@@ -207,7 +230,7 @@ INTERRUPT void breakpoint_handler(interrupt_frame_t *frame)
     u64 rax;
     asm volatile("mov %%rcx, %0"
                  : "=r"(rax)::"rcx");
-    printf("rcx: %x\n", rax);
+    printf("rcx: 0x%x\n", rax);
 }
 
 INTERRUPT void double_fault_handler(interrupt_frame_t *frame)
@@ -240,11 +263,6 @@ INTERRUPT void general_protection_fault_handler(interrupt_frame_t *frame, unsign
     printf("Error code %u\n", error_code);
     printf("Press any key to continue...\n");
     asm("hlt");
-}
-
-INTERRUPT void random_handler(struct interrupt_frame *frame)
-{
-    printf("interrupt!\n");
 }
 
 int register_kbhandler(int_handler_t handler)
@@ -301,11 +319,11 @@ void unregister_tmhandler(int_handler_t handler)
 
 void setup_idt_entry(struct IDT_entry *entry, u64 handler_address, u16 options)
 {
-    entry->offset_lowerbits = handler_address & 0xffff;
+    entry->offset_lowerbits = (u16)handler_address;
     entry->selector = 8;
     entry->options = options;
-    entry->offset_middlebits = (handler_address & 0xffff0000) >> 16;
-    entry->offset_higherbits = (handler_address & 0xffffffff00000000) >> 32;
+    entry->offset_middlebits = handler_address >> 16;
+    entry->offset_higherbits = handler_address >> 32;
     entry->reserved = 0;
 }
 
@@ -323,10 +341,13 @@ void init_interrupts()
     setup_idt_entry(&idt[32], (u64)timer_handler, options_trap);                       // Timer interrupt
     setup_idt_entry(&idt[33], (u64)keyboard_handler, options_present);                 // Keyboard interrupt
 
-    setup_idt_entry(&idt[49], (u64)random_handler, options_present);
-    lidt();
+    // Load IDT
+    lidt(idt, sizeof(idt));
 
     // // Unmask interrupts 0 & 1
     outb(0x21, 0b11111100);
     outb(0xA1, 0b11111111);
+
+    // Enable interrupts
+    sti();
 }

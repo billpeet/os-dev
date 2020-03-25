@@ -17,10 +17,10 @@ typedef struct int_handler
 
 typedef struct interrupt_frame
 {
-    u64 *rip;
+    u64 rip;
     u64 code_segment;
     u64 flags;
-    u64 *rsp;
+    u64 rsp;
     u64 stack_segment;
 } interrupt_frame_t;
 

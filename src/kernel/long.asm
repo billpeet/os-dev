@@ -1,18 +1,7 @@
 global long_mode_start
-global idt
-global idtr
 global switch_task
-global save_task
 
 section .text
-
-align 4
-idt:
-    resb 256*16
-
-  idtr:
-    dw (256*16)-1
-    dq idt
 
 extern kmain
 extern code_selector
@@ -27,22 +16,13 @@ long_mode_start:    ; start of long mode
     jmp kmain       ; jump to kmain in kernel.c
     ret
 
-
-save_task:
-    mov rax, rsp
-    add rax, 32             ; not sure why 32, but seems to work???
-    mov [rdi+6*8], rax
-    ret
-
-
 switch_task:
     ; push rbx
     ; push rsi
-    ; push rdi
     ; push rbp
 
-    mov rsp, [rsi+6*8]      ; set stack pointer - return address should be already configured at [rsp]
-    mov rbp, [rsi+7*8]      ; rbp
+    mov rsp, [rdi+6*8]      ; set stack pointer - return address should be already configured at [rsp]
+    mov rbp, [rdi+7*8]      ; rbp
     mov rax, [rsi+11*8]     ; CR3
     
     cmp rax, rcx            ; Has the virtual space changed? If not, don't bother setting CR3
@@ -52,44 +32,13 @@ switch_task:
 .doneVAS:
 
     ; pop rbp
-    ; pop rdi
     ; pop rsi
     ; pop rbx
 
-    mov rax, [rsi+8*8]     ; Load the return address into the new stack
-    mov [rsp], rax
-    ; mov rcx, [rsp]
-    ; int3
-
-
-    ret
-
-switch_task_no_save:
-    ; push rbx
-    ; push rsi
-    ; push rdi
-    ; push rbp
-
-    mov rsp, [rsi+6*8]      ; set stack pointer - return address should be already configured at [rsp]
-    mov rbp, [rsi+7*8]      ; rbp
-    mov rax, [rsi+11*8]     ; CR3
-    
-    cmp rax, rcx            ; Has the virtual space changed? If not, don't bother setting CR3
-    je .doneVAS
-    ; mov cr3, rax
-
-.doneVAS:
-
-    ; pop rbp
-    ; pop rdi
-    ; pop rsi
-    ; pop rbx
-
-    ; mov rax, [rsi+8*8]     ; Load the return address into the new stack
+    ; mov rax, [rdi+8*8]     ; Load the return address into the new stack
     ; mov [rsp], rax
-    ; mov rcx, [rsp]
-    ; int3
-
+    mov rcx, [rsp]
+    int3
 
     ret
 

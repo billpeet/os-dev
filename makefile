@@ -33,7 +33,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/kernel/x86.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 $(OBJDIR)/kernel/kasm.o: $(SRCDIR)/kernel/kernel.asm
-	$(ASM) -f elf64 $< -o $@
+	$(ASM) -f elf64 -g -F dwarf $< -o $@
 
 $(OBJDIR)/kernel/long.o: $(SRCDIR)/kernel/long.asm
-	$(ASM) -f elf64 $< -o $@
+	$(ASM) -f elf64 -g -F dwarf $< -o $@

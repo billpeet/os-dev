@@ -399,8 +399,8 @@ void shell_char()
     // printf("value at 0x44ffc8: 0x%x\n", *((u64 *)0x44ffc8));
     printf("value at 0x44ffc8: 0x%x\n", 0);
 
-    yield_nosave();
-    asm("hlt");
+    yield();
+    hlt();
 }
 
 void shell(void)

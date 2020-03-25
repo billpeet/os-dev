@@ -9,6 +9,10 @@
         "lba.h": "c",
         "string.h": "c",
         "types.h": "c",
-        "task.h": "c"
+        "task.h": "c",
+        "*.tcc": "c",
+        "cstdlib": "c",
+        "memory": "c",
+        "cmath": "c"
     }
 }

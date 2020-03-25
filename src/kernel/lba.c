@@ -1,6 +1,7 @@
 #include "lba.h"
 #include "vga.h"
 #include "kernel.h"
+#include "x86.h"
 
 #define CMD_MASTER 0xe0
 #define CMD_SLAVE 0xf0

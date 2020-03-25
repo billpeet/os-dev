@@ -5,17 +5,21 @@
 #include "kernel.h"
 #include "idt.h"
 
+#define MAX_TASKS 64
+
+task_t tasks[MAX_TASKS];
+
 task_t *running_task;
 task_t main_task;
-
-task_t *head;
-task_t *tail;
 
 static int task_id = 1;
 
 void display_current_task()
 {
-    setChar(running_task->id + 48, VGA_HEIGHT - 1, VGA_WIDTH - 1);
+    if (running_task == &main_task)
+        setChar('M', VGA_HEIGHT - 1, VGA_WIDTH - 1);
+    else
+        setChar(running_task->id + 48, VGA_HEIGHT - 1, VGA_WIDTH - 1);
 }
 
 void create_task_with_stack(task_t *task, void (*main)(), u64 flags, u64 *pagedir, u64 rbp, u64 rsp)
@@ -31,81 +35,61 @@ void create_task_with_stack(task_t *task, void (*main)(), u64 flags, u64 *pagedi
     task->regs.cr3 = (u64)pagedir;
     task->regs.rbp = rbp;
     task->regs.rsp = rsp;
-    task->next = 0;
-    task->id = task_id++;
+    task->state = RUNNABLE;
 }
 
-void create_task(task_t *task, void (*main)(), u64 flags, u64 *pagedir)
+task_t create_task(void (*main)(), u64 flags, u64 *pagedir)
 {
+    task_t task;
     u64 *stack = (u64 *)((u64)allocate_page() + 0x1000);
-    create_task_with_stack(task, main, flags, pagedir, (u64)stack, (u64)stack);
+    *stack = (u64)main;
+    create_task_with_stack(&task, main, flags, pagedir, (u64)stack, (u64)stack);
+    return task;
 }
 
-void schedule_task(task_t *task)
+void schedule_task(task_t task)
 {
-    if (tail == NULLPTR)
+    for (u32 i = 0; i < MAX_TASKS; i++)
     {
-        head = task;
-        tail = head;
-        head->next == NULLPTR;
-        return;
-    }
-
-    // Append to end
-    tail->next = task;
-    tail = task;
-    tail->next = head;
-}
-
-void unschedule_task(task_t *task)
-{
-    if (head == task)
-    {
-        if (head == tail)
+        if (tasks[i].state == UNUSED)
         {
-            // Removing only task
-            head = NULLPTR;
-            tail = NULLPTR;
+            task.id = i;
+            tasks[i] = task;
+            return;
         }
-        else
-        {
-            // Removing head
-            head == task->next;
-            tail->next = head;
-        }
-        return;
     }
-
-    task_t *curr = head;
-    while (curr->next != NULLPTR && curr->next != task)
-        curr = curr->next;
-    if (curr->next == NULLPTR)
-    {
-        printf("Task %u not found!\n", task->id);
-        panic(0);
-    }
-
-    if (task == tail)
-    {
-        // Pop off the end
-        tail = curr;
-        tail->next = head;
-    }
-    else
-    {
-        // Remove from the middle
-        curr->next = task->next;
-    }
+    printf("Exceeded task limit! Max. %u tasks supported\n", MAX_TASKS);
+    panic(0);
 }
 
-void switch_tasks()
+// Remove running task from schedule and return to scheduler
+void kill()
 {
-    task_t *last = running_task;
-    running_task = running_task->next;
-    display_current_task();
-    switch_task(&last->regs, &running_task->regs);
+    if (running_task != &main_task)
+    {
+        printf("killing task %u\n", running_task->id);
+        running_task->state = UNUSED;
+        running_task = &main_task;
+        display_current_task();
+        switch_task(&running_task->regs);
+    }
 }
 
+// Mark running task as idle and return to scheduler
+void sleep()
+{
+    save_task(running_task); // Save so we can resume later
+    if (running_task != &main_task)
+    {
+        printf("putting task %u to sleep\n", running_task->id);
+        running_task->state = IDLE;
+        running_task = &main_task;
+        display_current_task();
+        switch_task(&running_task->regs);
+    }
+}
+
+// Converts current context to the main_task
 void init_tasking()
 {
     asm volatile("mov %%cr3, %%rax; mov %%rax, %0;"
@@ -113,32 +97,42 @@ void init_tasking()
     asm volatile("pushf; mov (%%rsp), %%rax; mov %%rax, %0; popf;"
                  : "=m"(main_task.regs.flags)::"rax");
     printf("cr3: %x, flags: %x\n", main_task.regs.cr3, main_task.regs.flags);
+    main_task.state = RUNNABLE;
+    main_task.id = 9;
 
-    schedule_task(&main_task);
     running_task = &main_task;
     display_current_task();
 }
 
-void dump_task(task_t *t)
-{
-    printf("rax: %u, flags: %x, rip: %x, cr3: %x, rsp: %x\n",
-           t->regs.rax, t->regs.flags, t->regs.rip, t->regs.cr3, t->regs.rsp);
-}
-
-__attribute__((naked)) void yield_nosave()
-{
-    task_t *last = running_task;
-    running_task = running_task->next;
-    display_current_task();
-    switch_task(&last->regs, &running_task->regs);
-}
-
+// Yields control back to the scheduler
 __attribute__((naked)) void yield()
 {
-    // Save existing task's RSP/RBP
-    save_rsp(running_task);
-    task_t *last = running_task;
-    running_task = running_task->next;
+    save_task(running_task);
+    running_task = &main_task;
     display_current_task();
-    switch_task(&last->regs, &running_task->regs);
+    switch_task(&running_task->regs);
+}
+
+__attribute__((naked)) void switch_to(task_t *task)
+{
+    save_task(running_task);
+    running_task = task;
+    display_current_task();
+    switch_task(&running_task->regs);
+}
+
+// Infinite looping scheduler, scheduling each task one at a time
+__attribute__((noreturn)) void schedule()
+{
+    for (;;)
+    {
+        for (int i = 0; i < MAX_TASKS; i++)
+        {
+            if (tasks[i].state == RUNNABLE)
+            {
+                printf("Switching to %u\n", tasks[i].id);
+                switch_to(&tasks[i]);
+            }
+        }
+    }
 }
