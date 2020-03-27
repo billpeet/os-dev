@@ -1,3 +1,4 @@
 obj/
-kernel.bin
+*.bin
 os.iso
+hdfiles/*
