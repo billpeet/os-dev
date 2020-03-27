@@ -23,17 +23,20 @@ clean:
 os.iso: isofiles/boot/kernel.bin
 	grub-mkrescue -o os.iso isofiles
 
-fat.img: hdfiles/*
+fat.img: hdfiles/* hdfiles/program
 	sh build-fat.sh
 
-isofiles/boot/kernel.bin: $(OBJDIR)/kernel/kasm.o $(OBJDIR)/kernel/long.o $(KERNELOBJ) $(LIBCOBJ)
-	$(LD) -n -T link.ld -o isofiles/boot/kernel.bin $(OBJDIR)/kernel/kasm.o $(OBJDIR)/kernel/long.o $(KERNELOBJ) $(LIBCOBJ)
+hdfiles/program: $(SRCDIR)/user/program.c
+	$(CC) $< -o $@ $(CFLAGS)
+
+isofiles/boot/kernel.bin: $(OBJDIR)/kernel/entry.o $(OBJDIR)/kernel/entry_long.o $(KERNELOBJ) $(LIBCOBJ)
+	$(LD) -n -T link.ld -o isofiles/boot/kernel.bin $(OBJDIR)/kernel/entry.o $(OBJDIR)/kernel/entry_long.o $(KERNELOBJ) $(LIBCOBJ)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/kernel/x86.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 
-$(OBJDIR)/kernel/kasm.o: $(SRCDIR)/kernel/kernel.asm
+$(OBJDIR)/kernel/entry.o: $(SRCDIR)/kernel/entry.asm
 	$(ASM) -f elf64 -g -F dwarf $< -o $@
 
-$(OBJDIR)/kernel/long.o: $(SRCDIR)/kernel/long.asm
+$(OBJDIR)/kernel/entry_long.o: $(SRCDIR)/kernel/entry_long.asm
 	$(ASM) -f elf64 -g -F dwarf $< -o $@

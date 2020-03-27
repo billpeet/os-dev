@@ -1,9 +1,10 @@
 #include "frame_allocator.h"
 #include "types.h"
-#include "vga.h"
+#include "stdio.h"
 #include "boot_info.h"
 #include "kernel.h"
 #include <stdbool.h>
+#include <stddef.h>
 
 struct frame_header
 {
@@ -14,7 +15,7 @@ typedef struct frame_header frame_header_t;
 
 u64 next_free_frame;
 memory_map_entry_t *current_area;
-frame_header_t *free_frames = NULLPTR;
+frame_header_t *free_frames = NULL;
 
 u64 get_frame_containing_address(u64 addr)
 {
@@ -28,7 +29,6 @@ void next_area()
         memory_map_entry_t *entry = memory_map + i;
         if (entry->type == 1 && get_frame_containing_address(entry->base_addr + entry->length - 1) >= next_free_frame)
         {
-            // writeStrHexInt("New area: ", entry->base_addr);
             current_area = entry;
             u64 start_frame = get_frame_containing_address(entry->base_addr);
             if (next_free_frame < start_frame)
@@ -42,10 +42,9 @@ void next_area()
 
 void *allocate_frame()
 {
-    if (free_frames != NULLPTR)
+    if (free_frames != NULL)
     {
         void *free_frame = free_frames;
-        // writeStrHexInt("Spare frame at: ", (u64)free_frame);
         free_frames = free_frames->next;
         return free_frame;
     }
@@ -81,8 +80,8 @@ void *allocate_frame()
 void deallocate_frame(void *frame)
 {
     frame_header_t *header = (frame_header_t *)frame;
-    header->next = NULLPTR;
-    if (free_frames != NULLPTR)
+    header->next = NULL;
+    if (free_frames != NULL)
         free_frames->next = header;
 
     free_frames = header;

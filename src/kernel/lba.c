@@ -1,5 +1,5 @@
 #include "lba.h"
-#include "vga.h"
+#include "stdio.h"
 #include "kernel.h"
 #include "x86.h"
 

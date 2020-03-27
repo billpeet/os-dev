@@ -5,6 +5,4 @@
 
 void shell(void);
 
-extern task_t shell_task;
-
 #endif

@@ -1,5 +1,5 @@
 #include "paging.h"
-#include "vga.h"
+#include "stdio.h"
 #include "frame_allocator.h"
 #include "kernel.h"
 
@@ -34,7 +34,7 @@ page_table_t *get_page_table(page_table_t *page_table, u64 id)
     u64 entry = page_table->entries[id];
     if (!(entry & 0b1))
     {
-        printf("Page table does not exist!\n");
+        printf("Page table %u does not exist!\n", id);
         panic(3);
     }
     return (page_table_t *)((entry >> 8) << 8);
@@ -128,6 +128,11 @@ u64 get_physaddr(void *virt_addr)
     return addr + offset;
 }
 
+void identity_map(void *virt_addr, u8 flags)
+{
+    map_page((u64)virt_addr, virt_addr, flags);
+}
+
 void map_page(u64 phys_addr, void *virt_addr, u8 flags)
 {
     u64 p4_index;
@@ -165,6 +170,7 @@ void map_page(u64 phys_addr, void *virt_addr, u8 flags)
 
 void unmap_page(void *virt_addr)
 {
+
     u64 p4_index;
     u64 p3_index;
     u64 p2_index;

@@ -6,13 +6,10 @@
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
 
-void setChar(const char c, int line, int pos);
+extern void setChar(const char c, int line, int pos);
 
-void clearScreen();
+extern void vga_clearScreen();
 
-void writeChar(char c);
-void writeNewLine();
-void printf(const char *fmt, ...);
-void writeStatus(char const *str);
+extern void vga_writeChar(char c);
 
 #endif

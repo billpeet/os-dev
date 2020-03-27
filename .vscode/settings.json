@@ -13,6 +13,13 @@
         "*.tcc": "c",
         "cstdlib": "c",
         "memory": "c",
-        "cmath": "c"
+        "cmath": "c",
+        "stdio.h": "c",
+        "pong.h": "c",
+        "paging.h": "c",
+        "stddef.h": "c",
+        "stdarg.h": "c",
+        "x86.h": "c",
+        "cctype": "c"
     }
 }

@@ -2,8 +2,9 @@
 #include "frame_allocator.h"
 #include "paging.h"
 #include "types.h"
-#include "vga.h"
+#include "stdio.h"
 #include "kernel.h"
+#include <stddef.h>
 
 #define HEAP_SIZE 1000 * PAGE_SIZE // 1000 KiB
 #define HEAP_START 0x444444440000
@@ -18,7 +19,7 @@ struct heap_header
 
 typedef struct heap_header heap_header_t;
 
-heap_header_t *free_head = NULLPTR;
+heap_header_t *free_head = NULL;
 
 void init_heap()
 {
@@ -32,7 +33,7 @@ void init_heap()
 
 void *malloc(u64 size)
 {
-    if (free_head != NULLPTR)
+    if (free_head != NULL)
     {
         if (free_head->size >= size)
         {
@@ -43,7 +44,7 @@ void *malloc(u64 size)
         else
         {
             heap_header_t *prev = free_head;
-            while (prev->next != NULLPTR)
+            while (prev->next != NULL)
             {
                 heap_header_t *curr = prev->next;
                 if (curr->size >= size)

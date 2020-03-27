@@ -3,7 +3,14 @@
 
 #include "types.h"
 
-#define ENTER_KEY_CODE 0x1C
+#define ENTER_KEY_PRESSED 0x1C
+#define LEFT_CTRL_PRESSED 0x1D
+#define LEFT_SHIFT_PRESSED 0x2A
+#define LEFT_SHIFT_RELEASED 0xAA
+#define RIGHT_SHIFT_PRESSED 0x36
+#define RIGHT_SHIFT_RELEASED 0xB6
+#define CAPS_LOCK_PRESSED 0x3A
+#define CAPS_LOCK_RELEASED 0xBA
 
 u8 keyboard_map[128] =
     {

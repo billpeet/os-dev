@@ -1,9 +1,10 @@
 #include "fat.h"
-#include "vga.h"
+#include "stdio.h"
 #include "frame_allocator.h"
 #include "alloc.h"
-#include <string.h>
 #include "kernel.h"
+#include <string.h>
+#include <stddef.h>
 
 #define SECTORS_PER_FAT 1539
 #define FAT_ENTRIES SECTORS_PER_FAT *SECTOR_SIZE / sizeof(u32)
@@ -165,7 +166,7 @@ void save_directory(fat32_directory_t dir)
 // Windows-style 'dir' command
 void dump_directory(fat32_directory_t dir)
 {
-    if (dir.entries == NULLPTR)
+    if (dir.entries == NULL)
         return;
     writeChar('\n');
     printf("Mode       Name\n");
@@ -222,7 +223,7 @@ fat32_entry_t *find_entry(fat32_directory_t current_dir, char *entry_name, u8 di
         if (!(current_dir.entries[i].flags & 0b10000) == !dir && !strcasecmp(entry_name, filename))
             return &current_dir.entries[i];
     }
-    return NULLPTR;
+    return NULL;
 }
 
 fat32_entry_t *find_sub_directory(fat32_directory_t current_dir, char *subdir_name)
@@ -244,11 +245,11 @@ void *read_cluster(u32 drive_number, u32 cluster_number, u32 sector_count, void 
 void *read_file(u8 drive_number, fat32_directory_t current_dir, char *file_name, u32 *size)
 {
     if (!load_header(drive_number))
-        return NULLPTR;
+        return NULL;
 
     fat32_entry_t *entry = find_entry(current_dir, file_name, drive_number);
-    if (entry == NULLPTR)
-        return NULLPTR;
+    if (entry == NULL)
+        return NULL;
     *size = entry->file_size;
     printf("File size %u\n", *size);
 

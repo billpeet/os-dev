@@ -1,5 +1,6 @@
 #include "kernel.h"
 #include "vga.h"
+#include "stdio.h"
 #include "idt.h"
 #include "pong.h"
 #include "shell.h"
@@ -11,6 +12,8 @@
 #include "task.h"
 #include "x86.h"
 #include "pi.h"
+#include "paging.h"
+#include "serial.h"
 
 extern u16 code_selector;
 
@@ -25,7 +28,7 @@ void reboot()
 {
     u8 temp;
 
-    asm volatile("cli");
+    cli();
     do
     {
         temp = inb(KEYBOARD_STATUS_PORT);
@@ -35,7 +38,7 @@ void reboot()
 
     outb(KEYBOARD_STATUS_PORT, 0xFE);
 loop:
-    asm volatile("hlt");
+    hlt();
     goto loop;
 }
 
@@ -51,7 +54,7 @@ static void other_main()
     kill();
 }
 
-static void other_main2()
+static void other_main2_sub()
 {
     printf("task1!\n");
     for (int i = 0; i < 100; i++)
@@ -61,6 +64,11 @@ static void other_main2()
     }
     printf("task1 complete, dying now\n");
     kill();
+}
+
+static void other_main2()
+{
+    other_main2_sub();
 }
 
 static void sleeping_task()
@@ -73,33 +81,38 @@ static void sleeping_task()
 
 void kmain(boot_info_t *boot_info)
 {
-    clearScreen();
-    printf("Welcome to PeetOS\n");
+    vga_clearScreen();
+    printf("Welcome to PeetOS!\n");
+
+    // while (1)
+    //     asm volatile("hlt");
+
     init_boot_info(boot_info);
+
     init_frame_allocator();
     init_interrupts();
-    outb(0x1f6, 0x40);
     init_heap();
+    init_serial();
 
     init_tasking();
 
     u64 flags = main_task.regs.flags;
-    u64 *cr3 = (u64 *)main_task.regs.cr3;
+    u64 cr3 = main_task.regs.cr3;
 
     // task_t task0 = create_task(other_main, flags, cr3);
     // schedule_task(task0);
 
-    task_t task1 = create_task(other_main2, flags, cr3);
-    schedule_task(task1);
+    // task_t task1 = create_task(other_main2, flags, cr3);
+    // schedule_task(task1);
 
     // task_t task2 = create_task(sleeping_task, flags, cr3);
     // schedule_task(task2);
 
-    task_t primes_task = create_task(get_primes, flags, cr3);
-    schedule_task(primes_task);
+    // task_t primes_task = create_task(get_primes, flags, cr3);
+    // schedule_task(primes_task);
 
-    // create_task(&shell_task, shell, main_task.regs.flags, (void *)main_task.regs.cr3);
-    // schedule_task(&shell_task);
+    task_t *shell_task = create_task(shell, main_task.regs.flags, cr3);
+    printf("shell task cr3: 0x%x\n", shell_task->regs.cr3);
 
     printf("Running scheduler...\n");
     schedule();

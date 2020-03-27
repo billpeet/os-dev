@@ -1,5 +1,6 @@
 #include "shell.h"
 #include "idt.h"
+#include "stdio.h"
 #include "vga.h"
 #include "pong.h"
 #include "alloc.h"
@@ -12,6 +13,7 @@
 #include "task.h"
 #include "x86.h"
 #include <stdbool.h>
+#include <stddef.h>
 
 int_handler_t handler;
 char curr_cmd[100];
@@ -21,7 +23,7 @@ u8 current_drive;
 fat32_directory_t current_dir;
 char current_dir_name[100] = "\\";
 char current_dir_str[100] = "C:\\";
-task_t shell_task;
+task_t *shell_task;
 bool cmd_in_progress;
 
 void shell_char();
@@ -52,7 +54,7 @@ void update_location_string()
 
 void change_drive(u8 drive_number)
 {
-    if (current_dir.entries != NULLPTR)
+    if (current_dir.entries != NULL)
         free(current_dir.entries);
     current_drive = drive_number;
     current_dir = read_root_directory(drive_number);
@@ -102,7 +104,7 @@ void shell_execute()
     }
     else if (!strcasecmp(curr_cmd, "clear"))
     {
-        clearScreen();
+        vga_clearScreen();
     }
     else if (!strcasecmp(curr_cmd, "newframe"))
     {
@@ -276,17 +278,17 @@ void shell_execute()
         if (curr_param[0] == '\0' || curr_param[0] == ' ')
         {
             printf(current_dir_str);
-            writeNewLine();
+            printf("\n");
         }
         else
         {
             fat32_entry_t *entry = find_sub_directory(current_dir, curr_param);
-            if (entry == NULLPTR)
+            if (entry == NULL)
                 printf("Invalid directory\n");
             else
             {
                 u32 cluster_number = get_cluster_number(entry);
-                if (current_dir.entries != NULLPTR)
+                if (current_dir.entries != NULL)
                     free(current_dir.entries);
                 printf("Cluster number: %u\n", cluster_number);
                 current_dir = read_directory(current_drive, cluster_number);
@@ -317,31 +319,31 @@ void shell_execute()
     }
     else if (!strcasecmp(curr_cmd, "cat"))
     {
-        writeNewLine();
+        printf("\n");
         if (curr_param[0] == '\0' || curr_param[0] == ' ')
         {
             printf(current_dir_str);
-            writeNewLine();
+            printf("\n");
         }
         else
         {
             u32 file_size;
             u8 *file_ptr = read_file(current_drive, current_dir, curr_param, &file_size);
-            if (file_ptr == NULLPTR)
+            if (file_ptr == NULL)
                 printf("File not found\n");
             else
             {
                 printf("File size %u\n", file_size);
                 for (int i = 0; i < file_size /*&& i < 100*/; i++)
                     printf("%i", file_ptr[i]);
-                writeNewLine();
+                printf("\n");
                 free(file_ptr);
             }
         }
     }
     else if (!strcasecmp(curr_cmd, "touch"))
     {
-        writeNewLine();
+        printf("\n");
         if (curr_param[0] == '\0' || curr_param[0] == ' ')
         {
             printf("No file provided\n");
@@ -354,6 +356,10 @@ void shell_execute()
             printf("Added file %s\n", curr_param);
         }
     }
+    else if (!strcasecmp(curr_cmd, "tskmgr"))
+    {
+        dump_tasks();
+    }
     else if (!strcasecmp(curr_cmd, "reboot"))
     {
         printf("Rebooting...\n");
@@ -361,64 +367,70 @@ void shell_execute()
     }
     else
     {
-        printf("Unrecognised command '");
-        printf(curr_cmd);
-        printf("'\n");
+        // Attempt to find executable file with this name
+        printf("\n");
+        if (curr_cmd[0] != '\0' && curr_cmd[0] != ' ')
+        {
+            u32 file_size;
+            u8 *file_ptr = read_file(current_drive, current_dir, curr_param, &file_size);
+            if (file_ptr == NULL)
+                printf("Unrecognised command '%s'\n", curr_cmd);
+            else
+            {
+                printf("File size %u\n", file_size);
+                for (int i = 0; i < file_size /*&& i < 100*/; i++)
+                    printf("%i", file_ptr[i]);
+                printf("\n");
+                free(file_ptr);
+            }
+        }
     }
     shell_line_init();
 }
 
 void shell_char()
 {
-    // u64 rsp;
-    // asm volatile("mov %%rsp, %%rax\n\tmov %%rax, %0"
-    //              : "=m"(rsp)::"rax");
-    // printf("rsp in shell_char: %x\n", rsp);
-    // if (!cmd_in_progress)
-    // {
+    if (!cmd_in_progress)
+    {
 
-    //     char c = last_char;
-    //     if (c == '\b')
-    //     {
-    //         if (pos > 0)
-    //         {
-    //             curr_cmd[--pos] = '\0';
-    //             writeChar(c);
-    //         }
-    //     }
-    //     else if (c == '\n')
-    //         shell_execute();
-    //     else
-    //     {
-    //         writeChar(c);
-    //         curr_cmd[pos++] = c;
-    //     }
-    // }
-
-    // printf("Yielding back from shell\n");
-    // printf("value at 0x44ffc8: 0x%x\n", *((u64 *)0x44ffc8));
-    printf("value at 0x44ffc8: 0x%x\n", 0);
-
-    yield();
-    hlt();
+        char c = last_char;
+        if (c == '\b')
+        {
+            if (pos > 0)
+            {
+                curr_cmd[--pos] = '\0';
+                writeChar(c);
+            }
+        }
+        else if (c == '\n')
+        {
+            wake(shell_task);
+        }
+        else
+        {
+            writeChar(c);
+            curr_cmd[pos++] = c;
+        }
+    }
+    kill();
 }
 
 void shell(void)
 {
+    shell_task = running_task;
+    current_dir.entries = NULL;
     change_drive(0);
 
     shell_line_init();
     handler.handler = shell_char;
-    handler.task = &shell_task;
+    handler.task = shell_task;
     register_kbhandler(handler);
     // printf("registered handler\n");
 
     u64 i = 0;
-    // yield();
     while (1)
     {
-        // yield();
-        // printf("y");
-        asm("hlt");
+        sleep();
+        shell_execute();
     }
 }

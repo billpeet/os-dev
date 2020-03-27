@@ -1,7 +1,7 @@
 #include "pi.h"
 #include "types.h"
 #include <stdbool.h>
-#include "vga.h"
+#include "stdio.h"
 #include "task.h"
 
 u64 sqrt(u64 n)
@@ -50,7 +50,10 @@ void get_primes()
             last_prime = curr;
             prime_count++;
             if (prime_count % 1000 == 0)
-                printf("Found %u primes, last one %u\n", prime_count, last_prime);
+            {
+                yield();
+                //     printf("Found %u primes, last one %u\n", prime_count, last_prime);
+            }
         }
     }
     kill();

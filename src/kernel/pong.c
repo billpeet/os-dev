@@ -1,5 +1,6 @@
 #include "idt.h"
-#include "vga.h"
+#include "stdio.h"
+#include "x86.h"
 
 int isRunning;
 
@@ -16,19 +17,17 @@ void handle()
 void pong()
 {
     printf("starting pong...\n");
-    // create_task(pong_task, handle, running_task->regs.flags, running_task->regs.cr3);
     isRunning = 1;
 
     int_handler_t handler;
     handler.handler = handle;
     handler.task = running_task;
 
-    asm("sti");
+    sti();
 
     register_kbhandler(handler);
     while (isRunning)
     {
-        // printf("x");
-        asm("hlt");
+        hlt();
     };
 }

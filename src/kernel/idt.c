@@ -1,8 +1,11 @@
 #include "idt.h"
 #include "keyboard_map.h"
-#include "vga.h"
+#include "stdio.h"
 #include "kernel.h"
 #include "x86.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
 
 #define IDT_SIZE 256
 #define TASK_GATE 0x85
@@ -71,21 +74,21 @@ int_handler_t tm_handlers[100];
 INTERRUPT void timer_handler(interrupt_frame_t *frame)
 {
     cli();
-    // Save running task's current stack pointer
-    // task_t *previous_task = running_task;
-    // previous_task->regs.rsp = frame->rsp;
-    // previous_task->regs.rip = frame->rip;
-    // u64 rsp, rbp;
-    // asm volatile("mov %%rsp, %%rax\n\rmov %%rax, %0"
-    //              : "=m"(rsp)::"rax");
-    // asm volatile("mov %%rbp, %%rax\n\rmov %%rax, %0"
-    //              : "=m"(rbp)::"rax");
     handler_complete();
 
-    static u64 i = 0;
-    i++;
+    ticks++;
 
-    if (i % 10 == 0 && running_task != &main_task)
+    static u64 last_task = 0;
+    static u64 i = 0;
+    if (last_task == running_task->id)
+        i++;
+    else
+        last_task = running_task->id;
+
+    // Pre-emptively switching tasks doesn't work yet!
+    bool preempt_switch = false;
+
+    if (preempt_switch && i % 10 == 0 && running_task != &main_task)
     {
         // Time's up for the current task - jump back to scheduler
         // Save current task
@@ -96,131 +99,78 @@ INTERRUPT void timer_handler(interrupt_frame_t *frame)
         running_task->regs.rsp = (u64)old_stack;
         asm volatile("mov %%rbp, %0"
                      : "=r"(running_task->regs.rbp));
-        printf("Setting rtnaddr to 0x%x (at 0x%p)\n", *old_stack, old_stack);
 
         running_task = &main_task;
         frame->rip = running_task->regs.rip;
         frame->rsp = running_task->regs.rsp;
         frame->flags = running_task->regs.flags;
+        printf("frame has been set to rip %u, rsp %u\n", frame->rip, frame->rsp);
     }
-
-    // for (u32 i = 0; i < 100; i++)
-    // {
-    //     if (tm_handlers[i].handler)
-    //     {
-    //         tm_handlers[i].task->next = running_task;
-    //         display_current_task();
-    //         task_t new_task;
-    //         create_task_with_stack(&new_task, &&back_again, previous_task->regs.flags, (u64 *)previous_task->regs.cr3, rbp, rsp - 8);
-
-    //         task_t *old_next = tm_handlers[i].task->next;
-    //         running_task = tm_handlers[i].task;
-    //         running_task->next = &new_task;
-    //         running_task->regs.rip = (u64)tm_handlers[i].handler;
-    //         running_task->regs.rsp -= 8;
-    //         switch_task(&previous_task->regs, &running_task->regs);
-    //     back_again:
-    //         tm_handlers[i].task->next = old_next;
-    //     }
-    // }
-
-    // if (i % 40 == 0)
-    // if (i == 10 || i == 20)
-    // {
-    //     // switch tasks
-    //     task_t *next_task = running_task->next;
-    //     // Don't switch if there's only 1 task or the next task is invalid
-    //     if (next_task != running_task && next_task != NULLPTR)
-    //     {
-    //         frame->flags = next_task->regs.flags;
-    //         frame->rip = (u64 *)next_task->regs.rip;
-    //         printf("rip has been set to %p\n", frame->rip);
-    //         frame->rsp = (u64 *)next_task->regs.rsp;
-    //         running_task = running_task->next;
-    //         printf("TM: Jumping to rsp %p, rip %p\n", frame->rip, frame->rsp);
-    //         display_current_task();
-    //     }
-    // }
-
     sti();
 }
 
 int_handler_t kb_handlers[100];
 
 char last_char;
+bool shift;
+bool caps;
 
 INTERRUPT void keyboard_handler(interrupt_frame_t *frame)
 {
     cli();
-    // printf("Frame addr %p pointer addr (%p) jumping to rsp %p, rip %p\n", frame, &frame, frame->rsp, frame->rip);
-    // Save running task's current stack pointer
-    // task_t *previous_task = running_task;
-    // printf("previous task taskid=%u, ptr=%p ptrptr=%p\n", previous_task->id, previous_task, &previous_task);
     handler_complete();
 
     u16 status = inb(KEYBOARD_STATUS_PORT);
-
     if (status & 0x01)
     {
 
-        char keycode = inb(KEYBOARD_DATA_PORT);
+        u8 keycode = inb(KEYBOARD_DATA_PORT);
 
         if (keycode < 0)
             return;
 
-        char c;
+        if (keycode == LEFT_SHIFT_PRESSED || keycode == RIGHT_SHIFT_PRESSED)
+            shift = true;
+        else if (keycode == LEFT_SHIFT_RELEASED || keycode == RIGHT_SHIFT_RELEASED)
+            shift = false;
+        else if (keycode == CAPS_LOCK_PRESSED)
+            caps = !caps;
+        else if (keycode <= 0x39)
+        {
+            last_char = keyboard_map[keycode];
+            if (shift || caps)
+                last_char = toupper(last_char);
 
-        if (keycode == ENTER_KEY_CODE)
-            c = '\n';
-        else
-            c = keyboard_map[(u8)keycode];
-
-        writeChar(c);
-
-        // for (u32 i = 0; i < 100; i++)
-        // {
-        //     if (kb_handlers[i].handler)
-        //     {
-
-        //         //     task_t *old_next = kb_handlers[i].task->next;
-        //         //     kb_handlers[i].task->next = running_task;
-        //         //     display_current_task();
-        //         //     task_t new_task;
-
-        //         //     running_task = kb_handlers[i].task;
-        //         //     running_task->next = &new_task;
-        //         //     running_task->regs.rip = (u64)kb_handlers[i].handler;
-        //         //     printf("rip is now %x\n", running_task->regs.rip);
-        //         //     running_task->regs.rsp -= 8;
-        //         //     asm volatile("mov %0, %%rdi\n\t" ::"m"(c));
-        //         //     last_char = c;
-
-        //         //     u64 rsp, rbp;
-        //         //     asm volatile("mov %%rsp, %%rax\n\rmov %%rax, %0"
-        //         //                  : "=m"(rsp)::"rax");
-        //         //     asm volatile("mov %%rbp, %%rax\n\rmov %%rax, %0"
-        //         //                  : "=m"(rbp)::"rax");
-
-        //         //     create_task_with_stack(&new_task, &&back_again, previous_task->regs.flags, (u64 *)previous_task->regs.cr3, rbp, rsp - 8);
-
-        //         //     // printf("current rsp %x, previous task taskid=%u, ptr=%p ptrptr=%p, frame rip %p\n", rsp, previous_task->id, previous_task, &previous_task, frame->rip);
-        //         //     // printf("frame ptr %p, value %p, rip ptr %p, value %p\n", &frame, frame, &frame->rip, frame->rip);
-        //         //     printf("value at 0x44ffc8: 0x%x\n", *((u64 *)0x44ffc8));
-        //         //     switch_task(&previous_task->regs, &running_task->regs);
-        //         // back_again:
-        //         //     // asm volatile("pop %rax\n\t");
-        //         //     // asm volatile("pop %rax\n\t");
-        //         //     // printf("current rsp %x, previous task taskid=%u, ptr=%p ptrptr=%p, frame rip %p\n", rsp, previous_task->id, previous_task, &previous_task, &frame->rip);
-        //         //     // printf("frame ptr %p, value %p, rip ptr %p, value %p\n", &frame, frame, &frame->rip, frame->rip);
-        //         //     printf("value at 0x44ffc8: 0x%x\n", *((u64 *)0x44ffc8));
-        //         //     // printf("back again\n");
-        //         //     kb_handlers[i].task->next = old_next;
-        //     }
-        // }
+            for (u32 i = 0; i < 100; i++)
+            {
+                if (kb_handlers[i].handler)
+                {
+                    task_t *task = create_task(kb_handlers[i].handler, main_task.regs.flags, kb_handlers[i].task->regs.cr3);
+                }
+            }
+        }
     }
-    // running_task = previous_task;
-    // display_current_task();
-    // printf("Frame addr %p pointer addr (%p) jumping to rsp %p, rip %p\n", frame, &frame, frame->rsp, frame->rip);
+
+    bool switch_on_keypress = false;
+    if (switch_on_keypress && running_task != &main_task)
+    {
+        // Time's up for the current task - jump back to scheduler
+        // Save current task
+        printf("Forcing task %u to yield (was at 0x%x)\n", running_task->id, frame->rip);
+        running_task->regs.rip = frame->rip;
+        u64 *old_stack = (u64 *)(frame->rsp - 8);
+        *old_stack = frame->rip;
+        running_task->regs.rsp = (u64)old_stack;
+        asm volatile("mov %%rbp, %0"
+                     : "=r"(running_task->regs.rbp));
+
+        running_task = &main_task;
+        frame->rip = running_task->regs.rip;
+        frame->rsp = running_task->regs.rsp;
+        frame->flags = running_task->regs.flags;
+        printf("frame has been set to rip %u, rsp %u\n", frame->rip, frame->rsp);
+    }
+
     sti();
 }
 
@@ -244,14 +194,18 @@ INTERRUPT void page_fault_handler(interrupt_frame_t *frame, unsigned long long e
 {
     printf("Page fault!\n");
     printf("IP: 0x%x, SP: 0x%x\n", frame->rip);
+    u64 cr2;
+    asm volatile("mov %%cr2, %0"
+                 : "=r"(cr2));
+    if (error_code & 0b10)
+        printf("Attempted to write 0x%x\n", cr2);
+    else
+        printf("Attempted to read 0x%x\n", cr2);
+
     if (error_code & 0b1)
         printf("Page protection violation\n");
     else
         printf("Non-present page\n");
-    if (error_code & 0b10)
-        printf("Attempting to write\n");
-    else
-        printf("Attempting to read\n");
     printf("\n");
     // We have to try and fix it, or else just hang
     asm("hlt");
@@ -269,7 +223,7 @@ int register_kbhandler(int_handler_t handler)
 {
     for (u32 i = 0; i < 100; i++)
     {
-        if (kb_handlers[i].handler == NULLPTR)
+        if (kb_handlers[i].handler == NULL)
         {
             kb_handlers[i] = handler;
             return i;
@@ -284,8 +238,8 @@ void unregister_kbhandler(int_handler_t handler)
     {
         if (kb_handlers[i].handler == handler.handler && kb_handlers[i].task == handler.task)
         {
-            kb_handlers[i].handler = NULLPTR;
-            kb_handlers[i].task = NULLPTR;
+            kb_handlers[i].handler = NULL;
+            kb_handlers[i].task = NULL;
             break;
         }
     }
@@ -295,7 +249,7 @@ int register_tmhandler(int_handler_t handler)
 {
     for (u32 i = 0; i < 100; i++)
     {
-        if (tm_handlers[i].handler == NULLPTR)
+        if (tm_handlers[i].handler == NULL)
         {
             tm_handlers[i] = handler;
             return i;
@@ -310,8 +264,8 @@ void unregister_tmhandler(int_handler_t handler)
     {
         if (tm_handlers[i].handler == handler.handler && tm_handlers[i].task == handler.task)
         {
-            tm_handlers[i].handler = NULLPTR;
-            tm_handlers[i].task = NULLPTR;
+            tm_handlers[i].handler = NULL;
+            tm_handlers[i].task = NULL;
             break;
         }
     }

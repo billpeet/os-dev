@@ -4,6 +4,7 @@
 typedef enum taskstate_e
 {
     UNUSED,
+    SPARE,
     RUNNABLE,
     IDLE
 } taskstate;
@@ -20,17 +21,21 @@ typedef struct task
     registers_t regs;
     taskstate state;
     u32 id;
+    u64 time_spent;
 } task_t;
 
 extern void init_tasking();
 
-void display_current_task();
+extern void dump_tasks();
 
-extern task_t create_task(void (*main)(), u64 flags, u64 *pagedir);
-extern void create_task_with_stack(task_t *task, void (*main)(), u64 flags, u64 *pagedir, u64 rbp, u64 rsp);
-extern void schedule_task(task_t task);
+extern void display_current_task();
 
+extern task_t *create_task(void (*main)(), u64 flags, u64 cr3);
+
+extern void lock(void *);
+extern void release(void *);
 extern void sleep();
+extern void wake(task_t *task);
 extern void kill();
 extern void yield();
 extern void switch_task(registers_t *next);

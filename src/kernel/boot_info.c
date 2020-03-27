@@ -1,16 +1,23 @@
 #include "boot_info.h"
-#include "vga.h"
+#include "stdio.h"
 
 u64 kernel_start;
 u64 kernel_end;
 u64 multiboot_start;
 u64 multiboot_end;
+
+u64 kernel_page_table_start;
+u64 kernel_page_table_end;
+
 memory_map_entry_t *memory_map;
 u64 memory_map_count;
 
 void init_boot_info(boot_info_t *boot_info)
 {
     // printf("Total size: %u\n", boot_info->total_size);
+    asm volatile("mov %%cr3, %%rax; mov %%rax, %0;"
+                 : "=m"(kernel_page_table_start)::"rax");
+    kernel_page_table_end = kernel_page_table_start + 4096 * 3;
 
     boot_tag_t *tag = (boot_tag_t *)boot_info + 1;
     for (int i = 0; i < 100; i++)
@@ -59,8 +66,8 @@ void init_boot_info(boot_info_t *boot_info)
                 }
                 entry++;
             }
-            // printf("kernel start: %x, kernel end: %x\n", min, max);
-            // printf("boot_info start: %p, boot_info end: %p\n", boot_info, boot_info + boot_info->total_size);
+            printf("kernel start: %x, kernel end: %x\n", min, max);
+            printf("boot_info start: %p, boot_info end: %p\n", boot_info, boot_info + boot_info->total_size);
 
             kernel_start = min;
             kernel_end = max;
