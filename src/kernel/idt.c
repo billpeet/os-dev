@@ -3,6 +3,7 @@
 #include "stdio.h"
 #include "kernel.h"
 #include "x86.h"
+#include "console.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
@@ -137,9 +138,13 @@ INTERRUPT void keyboard_handler(interrupt_frame_t *frame)
             caps = !caps;
         else if (keycode <= 0x39)
         {
-            last_char = keyboard_map[keycode];
+            char c = keyboard_map[keycode];
             if (shift || caps)
-                last_char = toupper(last_char);
+                c = toupper(last_char);
+
+            printf("Queuing %c (0x%x)", c, c);
+            queue(c);
+            wake_interrupt(KEYBOARD_HANDLER_ID);
 
             for (u32 i = 0; i < 100; i++)
             {
@@ -288,12 +293,12 @@ void init_interrupts()
     u16 options_present = 0b1000111000000000; // Present bit set (15)
     u16 options_trap = 0b1000111100000000;    // Present bit (15) and trap bit (8) set
 
-    setup_idt_entry(&idt[3], (u64)breakpoint_handler, options_trap);                   // Breakpoint exception
-    setup_idt_entry(&idt[8], (u64)double_fault_handler, options_present);              // Double fault exception
-    setup_idt_entry(&idt[13], (u64)general_protection_fault_handler, options_present); // General protection fault exception
-    setup_idt_entry(&idt[14], (u64)page_fault_handler, options_present);               // Page fault exception
-    setup_idt_entry(&idt[32], (u64)timer_handler, options_trap);                       // Timer interrupt
-    setup_idt_entry(&idt[33], (u64)keyboard_handler, options_present);                 // Keyboard interrupt
+    setup_idt_entry(&idt[3], (u64)breakpoint_handler, options_trap);                    // Breakpoint exception
+    setup_idt_entry(&idt[8], (u64)double_fault_handler, options_present);               // Double fault exception
+    setup_idt_entry(&idt[13], (u64)general_protection_fault_handler, options_present);  // General protection fault exception
+    setup_idt_entry(&idt[14], (u64)page_fault_handler, options_present);                // Page fault exception
+    setup_idt_entry(&idt[TIMER_HANDLER_ID], (u64)timer_handler, options_trap);          // Timer interrupt
+    setup_idt_entry(&idt[KEYBOARD_HANDLER_ID], (u64)keyboard_handler, options_present); // Keyboard interrupt
 
     // Load IDT
     lidt(idt, sizeof(idt));

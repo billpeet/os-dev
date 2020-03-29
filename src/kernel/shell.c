@@ -15,7 +15,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-int_handler_t handler;
 char curr_cmd[100];
 char curr_param[100];
 int pos;
@@ -76,7 +75,7 @@ void shell_line_init()
 
 void shell_execute()
 {
-    writeChar('\n');
+    putChar('\n');
 
     for (u16 i = 0; i < 100; i++)
     {
@@ -266,7 +265,7 @@ void shell_execute()
         // {
         //     printf("%x", ptr[i]);
         // }
-        // writeChar('\n');
+        // putChar('\n');
     }
     else if (!strcasecmp(curr_cmd, "dir"))
     {
@@ -274,7 +273,7 @@ void shell_execute()
     }
     else if (!strcasecmp(curr_cmd, "cd"))
     {
-        writeChar('\n');
+        putChar('\n');
         if (curr_param[0] == '\0' || curr_param[0] == ' ')
         {
             printf(current_dir_str);
@@ -388,33 +387,6 @@ void shell_execute()
     shell_line_init();
 }
 
-void shell_char()
-{
-    if (!cmd_in_progress)
-    {
-
-        char c = last_char;
-        if (c == '\b')
-        {
-            if (pos > 0)
-            {
-                curr_cmd[--pos] = '\0';
-                writeChar(c);
-            }
-        }
-        else if (c == '\n')
-        {
-            wake(shell_task);
-        }
-        else
-        {
-            writeChar(c);
-            curr_cmd[pos++] = c;
-        }
-    }
-    kill();
-}
-
 void shell(void)
 {
     shell_task = running_task;
@@ -422,15 +394,26 @@ void shell(void)
     change_drive(0);
 
     shell_line_init();
-    handler.handler = shell_char;
-    handler.task = shell_task;
-    register_kbhandler(handler);
-    // printf("registered handler\n");
 
-    u64 i = 0;
     while (1)
     {
-        sleep();
-        shell_execute();
+        char c = readChar();
+        if (c == '\b')
+        {
+            if (pos > 0)
+            {
+                curr_cmd[--pos] = '\0';
+                putChar(c);
+            }
+        }
+        else if (c == '\n')
+        {
+            shell_execute();
+        }
+        else
+        {
+            putChar(c);
+            curr_cmd[pos++] = c;
+        }
     }
 }

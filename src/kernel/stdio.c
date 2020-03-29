@@ -1,13 +1,24 @@
 #include "stdio.h"
+#include "console.h"
 #include "vga.h"
 #include <stdarg.h>
 #include "types.h"
 #include <string.h>
 #include "serial.h"
+#include "task.h"
+#include "idt.h"
 
 #define HEXCHAR(c) c >= 10 ? c + 87 : c + 48
 
-void writeChar(char c)
+char readChar()
+{
+    while (char_available() == 0)
+        wait_for_interrupt(KEYBOARD_HANDLER_ID);
+    printf("available = %u\n", char_available());
+    return dequeue();
+}
+
+void putChar(char c)
 {
     vga_writeChar(c);
     write_serial(c);
@@ -17,7 +28,7 @@ int writeString(const char *str)
 {
     int i = 0;
     for (i = 0; str[i] != '\0'; i++)
-        writeChar(str[i]);
+        putChar(str[i]);
     return i - 1;
 }
 
@@ -25,7 +36,7 @@ int writeInt(u64 i)
 {
     if (i < 10)
     {
-        writeChar(i + 48);
+        putChar(i + 48);
         return 1;
     }
     else
@@ -50,7 +61,7 @@ int writeSInt(long i)
     int cnt = 0;
     if (i < 0)
     {
-        writeChar('-');
+        putChar('-');
         cnt++;
         i *= -1;
     }
@@ -61,7 +72,7 @@ int writeHexInt(u64 i)
 {
     if (i < 16)
     {
-        writeChar(HEXCHAR((char)i));
+        putChar(HEXCHAR((char)i));
         return 1;
     }
     else
@@ -109,7 +120,7 @@ int printf(const char *fmt, ...)
                 break;
             case 'c':
                 // char
-                writeChar(va_arg(args, int));
+                putChar(va_arg(args, int));
                 cnt++;
                 break;
             case 's':
@@ -122,19 +133,19 @@ int printf(const char *fmt, ...)
                 break;
             case '%':
                 // escaped '%' sign
-                writeChar('%');
+                putChar('%');
                 cnt++;
                 break;
             default:
                 // invalid format - output '%' sign
-                writeChar('%');
+                putChar('%');
                 cnt++;
                 break;
             }
         }
         else
         {
-            writeChar(fmt[i]);
+            putChar(fmt[i]);
             cnt++;
         }
     }

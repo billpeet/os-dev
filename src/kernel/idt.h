@@ -7,6 +7,9 @@
 #define KEYBOARD_DATA_PORT 0x60
 #define KEYBOARD_STATUS_PORT 0x64
 
+#define TIMER_HANDLER_ID 32
+#define KEYBOARD_HANDLER_ID 33
+
 void init_interrupts(void);
 
 typedef struct int_handler
@@ -28,7 +31,5 @@ int register_kbhandler(int_handler_t handler);
 void unregister_kbhandler(int_handler_t handler);
 int register_tmhandler(int_handler_t handler);
 void unregister_tmhandler(int_handler_t handler);
-
-extern char last_char;
 
 #endif

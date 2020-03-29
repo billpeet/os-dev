@@ -2,6 +2,7 @@
 #include "stdio.h"
 #include "kernel.h"
 #include "x86.h"
+#include "task.h"
 
 #define CMD_MASTER 0xe0
 #define CMD_SLAVE 0xf0
@@ -34,7 +35,7 @@ int lba_wait()
 {
     int r;
     while (((r = inb(0x1f7)) & (BUSY_FLAG | RDY_FLAG)) != RDY_FLAG)
-        ;
+        yield();
     if (r & (DF_FLAG | ERR_FLAG) != 0)
         return -1;
     return 0;
@@ -132,9 +133,9 @@ void write_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, lba_sec
     outb(base + 6, CMD_MASTER);
     outb(base + 1, 0x00);
     outb(base + 2, sector_count);
-    outb(base + 3, (u8)(sector_number & 0xff));
-    outb(base + 4, (u8)(sector_number & 0xff00) >> 8);
-    outb(base + 5, (u8)(sector_number & 0xff0000) >> 16);
+    outb(base + 3, (u8)(sector_number));
+    outb(base + 4, (u8)(sector_number >> 8));
+    outb(base + 5, (u8)(sector_number >> 16));
     outb(base + 6, ((sector_number >> 24) & 0x0F) | drive);
     outb(base + 7, CMD_WRITE);
 

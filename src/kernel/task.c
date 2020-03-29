@@ -99,8 +99,6 @@ void kill()
 {
     if (running_task != &main_task)
     {
-        // printf("Killing task %u\n", running_task->id);
-        // unmap_page(running_task->regs.rsp - 0x1000);
         running_task->state = SPARE;
         running_task = &main_task;
         display_current_task();
@@ -152,8 +150,21 @@ NAKED void sleep()
     save_task(running_task); // Save so we can resume later
     if (running_task != &main_task)
     {
-        // printf("putting task %u to sleep\n", running_task->id);
         running_task->state = IDLE;
+        running_task = &main_task;
+        display_current_task();
+        switch_task(&running_task->regs);
+    }
+}
+
+// Mark running task was waiting for specified interrupt
+NAKED void wait_for_interrupt(u32 interrupt_id)
+{
+    save_task(running_task);
+    if (running_task != &main_task)
+    {
+        running_task->state = WAITING;
+        running_task->interrupt_id = interrupt_id;
         running_task = &main_task;
         display_current_task();
         switch_task(&running_task->regs);
@@ -163,8 +174,17 @@ NAKED void sleep()
 // Wakes specified task
 void wake(task_t *task)
 {
-    // printf("Waking task %u\n", task->id);
     task->state = RUNNABLE;
+}
+
+// Wakes all tasks waiting for specified interrupt
+void wake_interrupt(u32 interrupt_id)
+{
+    for (int i = 0; i < MAX_TASKS; i++)
+    {
+        if (tasks[i].state == WAITING && tasks[i].interrupt_id == interrupt_id)
+            tasks[i].state = RUNNABLE;
+    }
 }
 
 // Converts current context to the main_task
@@ -214,8 +234,6 @@ __attribute__((noreturn)) void schedule()
                 tasks[i].time_spent += ticks - ticks_before;
                 // printf("back from %u\n", tasks[i].id);
             }
-            // else
-            //     printf("%u NR ", tasks[i].id);
         }
     }
 }

@@ -66,8 +66,8 @@ void init_boot_info(boot_info_t *boot_info)
                 }
                 entry++;
             }
-            printf("kernel start: %x, kernel end: %x\n", min, max);
-            printf("boot_info start: %p, boot_info end: %p\n", boot_info, boot_info + boot_info->total_size);
+            // printf("kernel start: %x, kernel end: %x\n", min, max);
+            // printf("boot_info start: %p, boot_info end: %p\n", boot_info, boot_info + boot_info->total_size);
 
             kernel_start = min;
             kernel_end = max;

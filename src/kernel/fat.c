@@ -58,7 +58,7 @@ void dump_header(fat32_boot_sector_t *header)
         printf("%x", header->jump_inst[i]);
     printf("\nOEM Id: ");
     for (u32 i = 0; i < 8; i++)
-        writeChar(header->oem_id[i]);
+        putChar(header->oem_id[i]);
     printf("\nBytes per sector: %u\n", header->bytes_per_sector);
     printf("Sectors per cluster: %u\n", header->sectors_per_cluster);
     printf("Reserved sectors: %u\n", header->reserved_sectors);
@@ -80,10 +80,10 @@ void dump_header(fat32_boot_sector_t *header)
     printf("ID: %u\n", header->id);
     printf("Volume label: ");
     for (u32 i = 0; i < 11; i++)
-        writeChar(header->volume_label[i]);
+        putChar(header->volume_label[i]);
     printf("\nSystem ID: ");
     for (u32 i = 0; i < 8; i++)
-        writeChar(header->system_id[i]);
+        putChar(header->system_id[i]);
     printf("\nFinal signature: %x\n", header->sig);
 }
 
@@ -100,32 +100,32 @@ int is_long_name(fat32_entry_t *entry)
 void dump_fat32_entry(fat32_entry_t *entry)
 {
     // printf("flags: %u ", entry->flags);
-    writeChar(entry->flags & 0b10000 ? 'd' : '-');
-    writeChar(entry->flags & 0b100000 ? 'a' : '-');
-    writeChar(entry->flags & 0b1000 ? 'v' : '-');
-    writeChar(entry->flags & 0b100 ? 's' : '-');
-    writeChar(entry->flags & 0b10 ? 'h' : '-');
-    writeChar(entry->flags & 0b1 ? 'r' : '-');
+    putChar(entry->flags & 0b10000 ? 'd' : '-');
+    putChar(entry->flags & 0b100000 ? 'a' : '-');
+    putChar(entry->flags & 0b1000 ? 'v' : '-');
+    putChar(entry->flags & 0b100 ? 's' : '-');
+    putChar(entry->flags & 0b10 ? 'h' : '-');
+    putChar(entry->flags & 0b1 ? 'r' : '-');
     printf("     ");
 
     for (u32 i = 0; i < 8; i++)
     {
         if (entry->filename[i] == ' ')
             break;
-        writeChar(entry->filename[i]);
+        putChar(entry->filename[i]);
     }
 
     if (entry->extension[0] != ' ')
     {
-        writeChar('.');
+        putChar('.');
         for (u32 i = 0; i < 3; i++)
         {
             if (entry->extension[i] == ' ')
                 break;
-            writeChar(entry->extension[i]);
+            putChar(entry->extension[i]);
         }
     }
-    writeChar('\n');
+    putChar('\n');
 }
 
 fat32_directory_t read_directory(u8 drive_number, int cluster_number)
@@ -168,12 +168,11 @@ void dump_directory(fat32_directory_t dir)
 {
     if (dir.entries == NULL)
         return;
-    writeChar('\n');
+    putChar('\n');
     printf("Mode       Name\n");
     printf("----       ----\n");
 
     fat32_entry_t *entries = dir.entries;
-    dump_fat32_entry(entries);
 
     for (u32 i = 0; entries[i].filename[0]; i++)
     {
@@ -187,7 +186,7 @@ void dump_directory(fat32_directory_t dir)
             dump_fat32_entry(entries + i);
     }
 
-    writeChar('\n');
+    putChar('\n');
 }
 
 u32 get_cluster_number(fat32_entry_t *f)

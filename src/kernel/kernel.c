@@ -14,6 +14,7 @@
 #include "pi.h"
 #include "paging.h"
 #include "serial.h"
+#include "console.h"
 
 extern u16 code_selector;
 
@@ -95,9 +96,17 @@ void kmain(boot_info_t *boot_info)
     init_serial();
 
     init_tasking();
+    init_console();
 
     u64 flags = main_task.regs.flags;
     u64 cr3 = main_task.regs.cr3;
+
+    signed short i = 0;
+    i--;
+    printf("i after --: %i\n", (long)i);
+    printf("i < 0: %u\n", i < 0 ? 1 : 0);
+    i = -1;
+    printf("i after setting to -1: %i\n", (long)i);
 
     // task_t task0 = create_task(other_main, flags, cr3);
     // schedule_task(task0);
