@@ -65,8 +65,7 @@ void read_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, lba_sect
         base = 0x178;
         break;
     default:
-        printf("Invalid drive number %u\n", drive_num);
-        panic(3);
+        panic("Invalid drive number %u\n", drive_num);
     }
 
     u8 drive = 0x40;
@@ -120,8 +119,7 @@ void write_sectors_lba(u8 drive_num, u32 sector_number, u8 sector_count, lba_sec
         base = 0x178;
         break;
     default:
-        printf("Invalid drive number %u\n", drive_num);
-        panic(3);
+        panic("Invalid drive number %u\n", drive_num);
     }
 
     u8 drive = 0x40;

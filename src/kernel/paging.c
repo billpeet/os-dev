@@ -33,10 +33,7 @@ page_table_t *get_page_table(page_table_t *page_table, u64 id)
 {
     u64 entry = page_table->entries[id];
     if (!(entry & 0b1))
-    {
-        printf("Page table %u does not exist!\n", id);
-        panic(3);
-    }
+        panic("Page table %u does not exist!\n", id);
     return (page_table_t *)((entry >> 8) << 8);
 }
 
@@ -61,11 +58,8 @@ page_table_t *create_table(page_table_t *parent, u64 index)
 void translate_address(void *virt_addr, u64 *p4_index, u64 *p3_index, u64 *p2_index, u64 *p1_index, u64 *offset)
 {
     if ((u64)virt_addr >= 0x0000800000000000 && (u64)virt_addr < 0xffff800000000000)
-    {
         // Invalid address - bits 48-64 must be the same as the 47th bit!
-        printf("Invalid address %p\n", virt_addr);
-        panic(1);
-    }
+        panic("Invalid address %p\n", virt_addr);
 
     *offset = (u64)virt_addr % PAGE_SIZE;
     u64 virt_page_addr = (u64)virt_addr / PAGE_SIZE;
@@ -107,10 +101,8 @@ u64 get_physaddr(void *virt_addr)
     u8 flags;
     get_page_table_entry(p2, p2_index, &addr, &flags);
     if (!(flags & 0b1))
-    {
-        printf("Page entry not present!\n");
-        panic(2);
-    }
+        panic("Page entry not present!\n");
+
     if (flags & 0x80)
     {
         // 4MiB page - return this
@@ -121,10 +113,8 @@ u64 get_physaddr(void *virt_addr)
     page_table_t *p1 = (page_table_t *)addr;
     get_page_table_entry(p1, p1_index, &addr, &flags);
     if (!(flags & 0b1))
-    {
-        printf("Page entry not present!\n");
-        panic(2);
-    }
+        panic("Page entry not present!\n");
+
     return addr + offset;
 }
 
@@ -148,20 +138,14 @@ void map_page(u64 phys_addr, void *virt_addr, u8 flags)
     if (flags & 0x80)
     {
         if (phys_addr & 63)
-        {
-            printf("Invalid physical frame - must be 4096 byte aligned!\n");
-            panic(2);
-        }
+            panic("Invalid physical frame - must be 4096 byte aligned!\n");
 
         p2->entries[p2_index] = (u64)phys_addr | flags | 0x01;
     }
     else
     {
         if (phys_addr & 7)
-        {
-            printf("Invalid physical frame - must be 4096 byte aligned!\n");
-            panic(2);
-        }
+            panic("Invalid physical frame - must be 4096 byte aligned!\n");
 
         page_table_t *p1 = create_table(p2, p2_index);
         p1->entries[p1_index] = phys_addr | flags | 0x01;

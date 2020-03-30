@@ -279,10 +279,7 @@ void *read_file(u8 drive_number, fat32_directory_t current_dir, char *file_name,
             cluster_number = fat_cache[cluster_number];
         }
         else
-        {
-            printf("Cluster %u out of range!\n", cluster_number);
-            panic(0);
-        }
+            panic("Cluster %u out of range!\n", cluster_number);
 
         offset++;
     }

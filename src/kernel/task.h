@@ -1,6 +1,8 @@
 #ifndef TASK_H
 #define TASK_H
 
+#include "gcc-attributes.h"
+
 typedef enum taskstate_e
 {
     // Unused task slot
@@ -52,6 +54,6 @@ extern void switch_task(registers_t *next);
 extern task_t *running_task;
 extern task_t main_task;
 
-extern __attribute__((noreturn)) void schedule();
+extern NORETURN void schedule();
 
 #endif

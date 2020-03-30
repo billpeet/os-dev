@@ -1,8 +1,9 @@
 #include "types.h"
 #include "task.h"
+#include "gcc-attributes.h"
 
 // Saves the rdi, rsi, rbx, rsp, rbp & rip registers of the currently running task
-__attribute__((always_inline)) static inline void save_task(task_t *task)
+ALWAYS_INLINE static inline void save_task(task_t *task)
 {
     asm volatile(
         "mov %%rdi, %0\n\t"
@@ -22,9 +23,9 @@ __attribute__((always_inline)) static inline void save_task(task_t *task)
 }
 
 // Loads IDT
-__attribute__((always_inline)) static inline void lidt(void *idt, u16 size)
+ALWAYS_INLINE static inline void lidt(void *idt, u16 size)
 {
-    volatile u16 idtr[3] __attribute__((aligned(16)));
+    volatile u16 idtr[3] ALIGNED(16);
     idtr[0] = size - 1;
     idtr[1] = (u16)(u64)idt;
     idtr[2] = (u16)((u64)idt >> 16);
@@ -32,18 +33,18 @@ __attribute__((always_inline)) static inline void lidt(void *idt, u16 size)
 }
 
 // Disables interrupts
-__attribute__((always_inline)) static inline void cli()
+ALWAYS_INLINE static inline void cli()
 {
     asm volatile("cli");
 }
 
 // Enables interrupts
-__attribute__((always_inline)) static inline void sti()
+ALWAYS_INLINE static inline void sti()
 {
     asm volatile("sti");
 }
 
-__attribute__((always_inline)) static inline void hlt()
+ALWAYS_INLINE static inline void hlt()
 {
     asm volatile("hlt");
 }

@@ -7,6 +7,7 @@
 #include "serial.h"
 #include "task.h"
 #include "idt.h"
+#include "keyboard.h"
 
 #define HEXCHAR(c) c >= 10 ? c + 87 : c + 48
 
@@ -14,14 +15,13 @@ char readChar()
 {
     while (char_available() == 0)
         wait_for_interrupt(KEYBOARD_HANDLER_ID);
-    printf("available = %u\n", char_available());
     return dequeue();
 }
 
 void putChar(char c)
 {
-    vga_writeChar(c);
     write_serial(c);
+    vga_writeChar(c);
 }
 
 int writeString(const char *str)
@@ -92,11 +92,9 @@ int writeHexInt(u64 i)
     }
 }
 
-int printf(const char *fmt, ...)
+int vprintf(const char *fmt, va_list args)
 {
     int cnt = 0;
-    va_list args;
-    va_start(args, fmt);
     for (int i = 0; fmt[i] != '\0'; i++)
     {
         if (fmt[i] == '%')
@@ -150,4 +148,11 @@ int printf(const char *fmt, ...)
         }
     }
     return cnt;
+}
+
+int printf(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    return vprintf(fmt, args);
 }

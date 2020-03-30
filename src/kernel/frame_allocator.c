@@ -51,8 +51,7 @@ void *allocate_frame()
 
     if ((u64)current_area == 0)
     {
-        printf("Out of memory!\n");
-        panic(3);
+        panic("Out of memory!\n");
     }
 
     u64 current_area_last_frame = get_frame_containing_address(current_area->base_addr + current_area->length - 1);

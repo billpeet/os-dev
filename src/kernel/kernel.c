@@ -15,14 +15,20 @@
 #include "paging.h"
 #include "serial.h"
 #include "console.h"
+#include "keyboard.h"
+#include <stdarg.h>
 
 extern u16 code_selector;
 
-void panic(u8 error_code)
+void panic(char const *error_message, ...)
 {
+    cli();
     printf("PANIC!\n");
-    printf("Error code %u\n", error_code);
-    hlt();
+    va_list args;
+    va_start(args, error_message);
+    vprintf(error_message, args);
+    while (1)
+        hlt();
 }
 
 void reboot()
@@ -80,13 +86,10 @@ static void sleeping_task()
     kill();
 }
 
-void kmain(boot_info_t *boot_info)
+NORETURN void kmain(boot_info_t *boot_info)
 {
     vga_clearScreen();
     printf("Welcome to PeetOS!\n");
-
-    // while (1)
-    //     asm volatile("hlt");
 
     init_boot_info(boot_info);
 
@@ -101,13 +104,6 @@ void kmain(boot_info_t *boot_info)
     u64 flags = main_task.regs.flags;
     u64 cr3 = main_task.regs.cr3;
 
-    signed short i = 0;
-    i--;
-    printf("i after --: %i\n", (long)i);
-    printf("i < 0: %u\n", i < 0 ? 1 : 0);
-    i = -1;
-    printf("i after setting to -1: %i\n", (long)i);
-
     // task_t task0 = create_task(other_main, flags, cr3);
     // schedule_task(task0);
 
@@ -120,11 +116,8 @@ void kmain(boot_info_t *boot_info)
     // task_t primes_task = create_task(get_primes, flags, cr3);
     // schedule_task(primes_task);
 
-    task_t *shell_task = create_task(shell, main_task.regs.flags, cr3);
-    printf("shell task cr3: 0x%x\n", shell_task->regs.cr3);
+    task_t *shell_task = create_task(shell, flags, cr3);
 
-    printf("Running scheduler...\n");
+    // printf("Running scheduler...\n");
     schedule();
-    printf("Popped out of main!\n");
-    panic(0);
 }

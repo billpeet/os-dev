@@ -2,10 +2,11 @@
 #define KERNEL_H
 
 #include "types.h"
+#include "gcc-attributes.h"
 
 void reboot(void);
 
-void panic(u8 error_code);
+NORETURN void panic(char const *error_message, ...);
 
 u64 ticks;
 

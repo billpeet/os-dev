@@ -8,8 +8,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define NAKED __attribute__((naked))
-
 #define MAX_TASKS 64
 #define MAX_LOCKS 64
 
@@ -83,10 +81,7 @@ task_t *create_task(void (*main)(), u64 flags, u64 cr3)
         }
     }
     if (task == NULL)
-    {
-        printf("Exceeded task limit! Max. %u tasks supported\n", MAX_TASKS);
-        panic(0);
-    }
+        panic("Exceeded task limit! Max. %u tasks supported\n", MAX_TASKS);
 
     // Load initial address into stack
     *stack = (u64)main;
@@ -194,9 +189,7 @@ void init_tasking()
                  : "=m"(main_task.regs.cr3)::"rax");
     asm volatile("pushf; mov (%%rsp), %%rax; mov %%rax, %0; popf;"
                  : "=m"(main_task.regs.flags)::"rax");
-    printf("cr3: %x, flags: %x\n", main_task.regs.cr3, main_task.regs.flags);
     main_task.state = RUNNABLE;
-
     running_task = &main_task;
     display_current_task();
 }
@@ -220,7 +213,7 @@ NAKED void switch_to(task_t *task)
 }
 
 // Infinite looping scheduler, scheduling each task one at a time
-__attribute__((noreturn)) void schedule()
+void schedule()
 {
     for (;;)
     {

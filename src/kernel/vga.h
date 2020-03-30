@@ -5,6 +5,9 @@
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
+#define VGA_MAX VGA_WIDTH *VGA_HEIGHT
+
+extern void vga_moveUp();
 
 extern void setChar(const char c, int line, int pos);
 

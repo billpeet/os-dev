@@ -1,9 +1,9 @@
 #include "idt.h"
-#include "keyboard_map.h"
 #include "stdio.h"
 #include "kernel.h"
 #include "x86.h"
-#include "console.h"
+#include "gcc-attributes.h"
+#include "keyboard.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
@@ -13,18 +13,12 @@
 #define TRAP_GATE 0x8f
 #define INTERRUPT_GATE 0x8e
 #define KERNEL_CODE_SEGMENT_OFFSET 0x08
-#ifdef __GNUC__
-#define INTERRUPT __attribute__((interrupt))
-#define EXCEPTION __attribute__((exception))
-#else
-#define INTERRUPT
-#endif
 
 struct idt_pointer
 {
     u16 limit;
     u64 base;
-} __attribute((packed));
+} PACKED;
 
 extern void *code_selector;
 
@@ -36,9 +30,9 @@ typedef struct IDT_entry
     u16 offset_middlebits;
     u32 offset_higherbits;
     u32 reserved;
-} __attribute((packed)) IDT_entry_t;
+} PACKED IDT_entry_t;
 
-IDT_entry_t idt[IDT_SIZE] __attribute((aligned(4)));
+IDT_entry_t idt[IDT_SIZE] ALIGNED(4);
 
 void init_pic()
 {
@@ -112,7 +106,6 @@ INTERRUPT void timer_handler(interrupt_frame_t *frame)
 
 int_handler_t kb_handlers[100];
 
-char last_char;
 bool shift;
 bool caps;
 
@@ -120,79 +113,21 @@ INTERRUPT void keyboard_handler(interrupt_frame_t *frame)
 {
     cli();
     handler_complete();
-
-    u16 status = inb(KEYBOARD_STATUS_PORT);
-    if (status & 0x01)
-    {
-
-        u8 keycode = inb(KEYBOARD_DATA_PORT);
-
-        if (keycode < 0)
-            return;
-
-        if (keycode == LEFT_SHIFT_PRESSED || keycode == RIGHT_SHIFT_PRESSED)
-            shift = true;
-        else if (keycode == LEFT_SHIFT_RELEASED || keycode == RIGHT_SHIFT_RELEASED)
-            shift = false;
-        else if (keycode == CAPS_LOCK_PRESSED)
-            caps = !caps;
-        else if (keycode <= 0x39)
-        {
-            char c = keyboard_map[keycode];
-            if (shift || caps)
-                c = toupper(last_char);
-
-            printf("Queuing %c (0x%x)", c, c);
-            queue(c);
-            wake_interrupt(KEYBOARD_HANDLER_ID);
-
-            for (u32 i = 0; i < 100; i++)
-            {
-                if (kb_handlers[i].handler)
-                {
-                    task_t *task = create_task(kb_handlers[i].handler, main_task.regs.flags, kb_handlers[i].task->regs.cr3);
-                }
-            }
-        }
-    }
-
-    bool switch_on_keypress = false;
-    if (switch_on_keypress && running_task != &main_task)
-    {
-        // Time's up for the current task - jump back to scheduler
-        // Save current task
-        printf("Forcing task %u to yield (was at 0x%x)\n", running_task->id, frame->rip);
-        running_task->regs.rip = frame->rip;
-        u64 *old_stack = (u64 *)(frame->rsp - 8);
-        *old_stack = frame->rip;
-        running_task->regs.rsp = (u64)old_stack;
-        asm volatile("mov %%rbp, %0"
-                     : "=r"(running_task->regs.rbp));
-
-        running_task = &main_task;
-        frame->rip = running_task->regs.rip;
-        frame->rsp = running_task->regs.rsp;
-        frame->flags = running_task->regs.flags;
-        printf("frame has been set to rip %u, rsp %u\n", frame->rip, frame->rsp);
-    }
-
+    keyboard_rec();
     sti();
 }
 
 INTERRUPT void breakpoint_handler(interrupt_frame_t *frame)
 {
-    printf("Breakpoint!\n");
     u64 rax;
     asm volatile("mov %%rcx, %0"
                  : "=r"(rax)::"rcx");
-    printf("rcx: 0x%x\n", rax);
+    printf("Breakpoint! rcx: 0x%x\n", rax);
 }
 
-INTERRUPT void double_fault_handler(interrupt_frame_t *frame)
+NORETURN INTERRUPT void double_fault_handler(interrupt_frame_t *frame, unsigned long long error_code)
 {
-    printf("PANIC: double fault!\n");
-    printf("\nPress any key to continue...\n");
-    asm("hlt");
+    panic("Double fault! Error code %u\n", error_code);
 }
 
 INTERRUPT void page_fault_handler(interrupt_frame_t *frame, unsigned long long error_code)
@@ -212,16 +147,14 @@ INTERRUPT void page_fault_handler(interrupt_frame_t *frame, unsigned long long e
     else
         printf("Non-present page\n");
     printf("\n");
-    // We have to try and fix it, or else just hang
-    asm("hlt");
+
+    // We have to try and fix it, or else panic
+    panic("Page fault");
 }
 
-INTERRUPT void general_protection_fault_handler(interrupt_frame_t *frame, unsigned long long error_code)
+NORETURN INTERRUPT void general_protection_fault_handler(interrupt_frame_t *frame, unsigned long long error_code)
 {
-    printf("\nPANIC: general protection fault!\n");
-    printf("Error code %u\n", error_code);
-    printf("Press any key to continue...\n");
-    asm("hlt");
+    panic("General protection fault at IP 0x%x, SP 0x%x\nError code %u\n", frame->rip, frame->rsp, error_code);
 }
 
 int register_kbhandler(int_handler_t handler)
@@ -234,7 +167,7 @@ int register_kbhandler(int_handler_t handler)
             return i;
         }
     }
-    printf("All handlers are full!\n");
+    panic("All handlers are full!\n");
 }
 
 void unregister_kbhandler(int_handler_t handler)
@@ -260,7 +193,7 @@ int register_tmhandler(int_handler_t handler)
             return i;
         }
     }
-    printf("All handlers are full!\n");
+    panic("All handlers are full!\n");
 }
 
 void unregister_tmhandler(int_handler_t handler)

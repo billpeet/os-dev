@@ -62,10 +62,7 @@ void *malloc(u64 size)
     header->size = size;
     current = (u8 *)header + sizeof(heap_header_t) + size;
     if ((u64)current >= HEAP_END)
-    {
-        printf("Heap allocation failed: heap is full!\n");
-        panic(1);
-    }
+        panic("Heap allocation failed: heap is full!\n");
     return (u8 *)header + sizeof(heap_header_t);
 }
 

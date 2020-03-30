@@ -1,50 +1,68 @@
 #include "console.h"
 #include "types.h"
+#include "stdio.h"
+#include "x86.h"
+#include "vga.h"
+
+#define QUEUE_SIZE 100
 
 struct queue
 {
-    char chars[100];
-    signed short curr;
+    char chars[QUEUE_SIZE];
+    u64 front, rear, cnt;
 } char_queue;
 
-int lockcnt = 0;
+static int disable_counter = 0;
 
-void lock_queue()
+static void lock_queue()
 {
-    while (lockcnt > 0)
-        ;
-    lockcnt++;
+    cli();
+    disable_counter++;
 }
 
-void unlock()
+static void unlock_queue()
 {
-    lockcnt--;
+    disable_counter--;
+    if (disable_counter == 0)
+        sti();
 }
 
 void init_console()
 {
-    char_queue.curr = -1;
-    printf("curr after init: %i\n", (long)char_queue.curr);
+    lock_queue();
+    char_queue.front = 0;
+    char_queue.rear = 0;
+    char_queue.cnt = 0;
+    unlock_queue();
 }
 
 void queue(char c)
 {
+    if (char_queue.cnt >= QUEUE_SIZE)
+        return;
     lock_queue();
-    printf("queueing 0x%x at %i\n", c, char_queue.curr + 1);
-    char_queue.chars[++char_queue.curr] = c;
-    unlock();
+    char_queue.chars[char_queue.rear++] = c;
+    char_queue.cnt++;
+    unlock_queue();
 }
 
 char dequeue()
 {
     lock_queue();
-    printf("dequeuing 0x%x\n", char_queue.chars[char_queue.curr]);
-    return char_queue.chars[char_queue.curr--];
-    unlock();
+    if (char_queue.front >= QUEUE_SIZE)
+        panic("front has gone screwy again\n");
+    char c = char_queue.chars[char_queue.front++];
+    if (--char_queue.cnt == 0)
+    {
+        //Reset position to start of array
+        char_queue.front = 0;
+        char_queue.rear = 0;
+    }
+    unlock_queue();
+    return c;
 }
 
 int char_available()
 {
-    printf("curr: %i\n", (long)char_queue.curr);
-    return char_queue.curr >= 0 ? 1 : 0;
+    return char_queue.cnt > 0 ? 1 : 0;
 }

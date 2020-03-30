@@ -105,6 +105,10 @@ void shell_execute()
     {
         vga_clearScreen();
     }
+    else if (!strcasecmp(curr_cmd, "moveup"))
+    {
+        vga_moveUp();
+    }
     else if (!strcasecmp(curr_cmd, "newframe"))
     {
         void *new_frame = allocate_frame();

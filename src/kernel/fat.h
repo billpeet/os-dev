@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "lba.h"
+#include "gcc-attributes.h"
 
 typedef struct fat32_boot_sector
 {
@@ -34,7 +35,7 @@ typedef struct fat32_boot_sector
     char system_id[8];        // 0x52 (82)
     u8 code[420];             // 0x5A (90)
     u16 sig;                  // 0x1FE (510)
-} __attribute__((__packed__)) fat32_boot_sector_t;
+} PACKED fat32_boot_sector_t;
 
 typedef struct fat32_fs_info
 {
@@ -45,7 +46,7 @@ typedef struct fat32_fs_info
     u32 available_cluster_hint;
     u8 reserved_2[12];
     u32 trail_signature;
-} __attribute__((__packed__)) fat32_fs_info_t;
+} PACKED fat32_fs_info_t;
 
 typedef struct fat32_entry
 {
@@ -58,7 +59,7 @@ typedef struct fat32_entry
     u16 date;               // 0x18 (24)
     u16 first_cluster_low;  // 0x1A (26)
     u32 file_size;          // 0x1C (28)
-} __attribute__((__packed__)) fat32_entry_t;
+} PACKED fat32_entry_t;
 
 typedef struct fat32_directory
 {
