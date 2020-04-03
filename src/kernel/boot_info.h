@@ -1,6 +1,7 @@
 #ifndef BOOT_INFO_H
 #define BOOT_INFO_H
 
+#include <stddef.h>
 #include "types.h"
 
 struct boot_info
@@ -44,11 +45,11 @@ typedef struct elf_section_entry elf_section_entry_t;
 
 void init_boot_info(boot_info_t *boot_info);
 
-extern u64 kernel_start;
-extern u64 kernel_end;
-extern u64 multiboot_start;
-extern u64 multiboot_end;
+extern size_t kernel_start;
+extern size_t kernel_end;
+extern size_t multiboot_start;
+extern size_t multiboot_end;
 extern memory_map_entry_t *memory_map;
-extern u64 memory_map_count;
+extern size_t memory_map_count;
 
 #endif

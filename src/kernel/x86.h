@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include "types.h"
 #include "task.h"
 #include "gcc-attributes.h"
@@ -27,9 +28,15 @@ ALWAYS_INLINE static inline void lidt(void *idt, u16 size)
 {
     volatile u16 idtr[3] ALIGNED(16);
     idtr[0] = size - 1;
-    idtr[1] = (u16)(u64)idt;
-    idtr[2] = (u16)((u64)idt >> 16);
+    idtr[1] = (u16)(size_t)idt;
+    idtr[2] = (u16)((size_t)idt >> 16);
     asm volatile("lidt (%0)" ::"r"(idtr));
+}
+
+// Triggers interrupt 3
+ALWAYS_INLINE static inline void int3()
+{
+    asm volatile("int3");
 }
 
 // Disables interrupts
@@ -99,4 +106,15 @@ static inline void outsl(int port, const void *addr, int cnt)
         : "=S"(addr), "=c"(cnt)
         : "d"(port), "0"(addr), "1"(cnt)
         : "cc");
+}
+
+static inline u8 cpl()
+{
+    u8 cpl;
+    asm volatile(
+        "mov %%cs, %%ax\n\t"
+        "and 3, %%ax\n\t"
+        "mov %%ax, %0\n\t"
+        : "=m"(cpl)::"ax");
+    return cpl;
 }

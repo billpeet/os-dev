@@ -13,31 +13,30 @@ struct frame_header
 
 typedef struct frame_header frame_header_t;
 
-u64 next_free_frame;
+size_t next_free_frame;
 memory_map_entry_t *current_area;
 frame_header_t *free_frames = NULL;
 
-u64 get_frame_containing_address(u64 addr)
+size_t get_frame_containing_address(size_t addr)
 {
     return addr / PAGE_SIZE;
 }
 
 void next_area()
 {
-    for (u64 i = 0; i < memory_map_count; i++)
+    for (size_t i = 0; i < memory_map_count; i++)
     {
         memory_map_entry_t *entry = memory_map + i;
         if (entry->type == 1 && get_frame_containing_address(entry->base_addr + entry->length - 1) >= next_free_frame)
         {
             current_area = entry;
-            u64 start_frame = get_frame_containing_address(entry->base_addr);
+            size_t start_frame = get_frame_containing_address(entry->base_addr);
             if (next_free_frame < start_frame)
                 next_free_frame = start_frame;
             return;
         }
     }
-
-    current_area = (void *)0;
+    current_area = NULL;
 }
 
 void *allocate_frame()
@@ -49,12 +48,10 @@ void *allocate_frame()
         return free_frame;
     }
 
-    if ((u64)current_area == 0)
-    {
+    if (current_area == NULL)
         panic("Out of memory!\n");
-    }
 
-    u64 current_area_last_frame = get_frame_containing_address(current_area->base_addr + current_area->length - 1);
+    size_t current_area_last_frame = get_frame_containing_address(current_area->base_addr + current_area->length - 1);
     if (next_free_frame > current_area_last_frame)
     {
         // We've gone off the end of the current area, choose a new area and try again

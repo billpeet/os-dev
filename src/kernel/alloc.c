@@ -13,7 +13,7 @@ void *current;
 
 struct heap_header
 {
-    u64 size;
+    size_t size;
     struct heap_header *next;
 };
 
@@ -23,15 +23,15 @@ heap_header_t *free_head = NULL;
 
 void init_heap()
 {
-    for (u64 i = 1; i < HEAP_SIZE; i += PAGE_SIZE)
+    for (int i = 1; i < HEAP_SIZE; i += PAGE_SIZE)
     {
-        u64 phys_frame = (u64)allocate_frame();
+        size_t phys_frame = (size_t)allocate_frame();
         map_page(phys_frame, (u8 *)HEAP_START + i, 0b10);
     }
     current = (void *)HEAP_START;
 }
 
-void *malloc(u64 size)
+void *malloc(size_t size)
 {
     if (free_head != NULL)
     {
@@ -61,7 +61,7 @@ void *malloc(u64 size)
     heap_header_t *header = (heap_header_t *)current;
     header->size = size;
     current = (u8 *)header + sizeof(heap_header_t) + size;
-    if ((u64)current >= HEAP_END)
+    if ((size_t)current >= HEAP_END)
         panic("Heap allocation failed: heap is full!\n");
     return (u8 *)header + sizeof(heap_header_t);
 }

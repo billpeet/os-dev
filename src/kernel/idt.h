@@ -1,6 +1,7 @@
 #ifndef IDT_H
 #define IDT_H
 
+#include <stddef.h>
 #include "types.h"
 #include "task.h"
 
@@ -16,11 +17,11 @@ typedef struct int_handler
 
 typedef struct interrupt_frame
 {
-    u64 rip;
-    u64 code_segment;
-    u64 flags;
-    u64 rsp;
-    u64 stack_segment;
+    size_t rip;
+    size_t code_segment;
+    size_t flags;
+    size_t rsp;
+    size_t stack_segment;
 } interrupt_frame_t;
 
 int register_kbhandler(int_handler_t handler);

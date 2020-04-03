@@ -8,7 +8,7 @@
 #include "types.h"
 #include "boot_info.h"
 #include "alloc.h"
-#include "lba.h"
+#include "ata.h"
 #include "task.h"
 #include "x86.h"
 #include "pi.h"
@@ -16,6 +16,8 @@
 #include "serial.h"
 #include "console.h"
 #include "keyboard.h"
+#include "tester.h"
+#include "gdt.h"
 #include <stdarg.h>
 
 extern u16 code_selector;
@@ -101,6 +103,14 @@ NORETURN void kmain(boot_info_t *boot_info)
     init_tasking();
     init_console();
 
+    tester();
+
+    dump_entry(&gdt64[0]);
+    dump_entry(&gdt64[1]);
+    dump_entry(&gdt64[2]);
+
+    init_ring3();
+
     u64 flags = main_task.regs.flags;
     u64 cr3 = main_task.regs.cr3;
 
@@ -118,6 +128,6 @@ NORETURN void kmain(boot_info_t *boot_info)
 
     task_t *shell_task = create_task(shell, flags, cr3);
 
-    // printf("Running scheduler...\n");
+    printf("Running scheduler...\n");
     schedule();
 }

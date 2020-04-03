@@ -11,14 +11,14 @@
 
 #define HEXCHAR(c) c >= 10 ? c + 87 : c + 48
 
-char readChar()
+int getchar()
 {
     while (char_available() == 0)
         wait_for_interrupt(KEYBOARD_HANDLER_ID);
     return dequeue();
 }
 
-void putChar(char c)
+int putchar(int c)
 {
     write_serial(c);
     vga_writeChar(c);
@@ -28,7 +28,7 @@ int writeString(const char *str)
 {
     int i = 0;
     for (i = 0; str[i] != '\0'; i++)
-        putChar(str[i]);
+        putchar(str[i]);
     return i - 1;
 }
 
@@ -36,7 +36,7 @@ int writeInt(u64 i)
 {
     if (i < 10)
     {
-        putChar(i + 48);
+        putchar(i + 48);
         return 1;
     }
     else
@@ -61,7 +61,7 @@ int writeSInt(long i)
     int cnt = 0;
     if (i < 0)
     {
-        putChar('-');
+        putchar('-');
         cnt++;
         i *= -1;
     }
@@ -72,7 +72,7 @@ int writeHexInt(u64 i)
 {
     if (i < 16)
     {
-        putChar(HEXCHAR((char)i));
+        putchar(HEXCHAR((char)i));
         return 1;
     }
     else
@@ -118,7 +118,7 @@ int vprintf(const char *fmt, va_list args)
                 break;
             case 'c':
                 // char
-                putChar(va_arg(args, int));
+                putchar(va_arg(args, int));
                 cnt++;
                 break;
             case 's':
@@ -131,19 +131,19 @@ int vprintf(const char *fmt, va_list args)
                 break;
             case '%':
                 // escaped '%' sign
-                putChar('%');
+                putchar('%');
                 cnt++;
                 break;
             default:
                 // invalid format - output '%' sign
-                putChar('%');
+                putchar('%');
                 cnt++;
                 break;
             }
         }
         else
         {
-            putChar(fmt[i]);
+            putchar(fmt[i]);
             cnt++;
         }
     }

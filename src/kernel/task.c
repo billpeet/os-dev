@@ -62,21 +62,23 @@ void create_task_with_stack(task_t *task, void (*main)(), u64 flags, u64 cr3, u6
 task_t *create_task(void (*main)(), u64 flags, u64 cr3)
 {
     task_t *task;
-    u64 *stack;
+    size_t *stack;
     for (u32 i = 0; i < MAX_TASKS; i++)
     {
         if (tasks[i].state == SPARE)
         {
+            // Reuse existing stack
             task = &tasks[i];
             task->id = i;
-            stack = (u64 *)task->regs.rbp;
+            stack = (size_t *)task->regs.rbp;
             break;
         }
         else if (tasks[i].state == UNUSED)
         {
+            // Create new stack
             task = &tasks[i];
             task->id = i;
-            stack = (u64 *)((u64)allocate_page() + 0x1000);
+            stack = (size_t *)((size_t)allocate_page() + 0x1000);
             break;
         }
     }
@@ -84,8 +86,8 @@ task_t *create_task(void (*main)(), u64 flags, u64 cr3)
         panic("Exceeded task limit! Max. %u tasks supported\n", MAX_TASKS);
 
     // Load initial address into stack
-    *stack = (u64)main;
-    create_task_with_stack(task, main, flags, cr3, (u64)stack, (u64)stack);
+    *stack = (size_t)main;
+    create_task_with_stack(task, main, flags, cr3, (u64)stack, (u64)(stack));
     return task;
 }
 

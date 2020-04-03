@@ -22,32 +22,32 @@ page_table_t *level_4_table()
     return (page_table_t *)cr3;
 }
 
-void *get_page_table_entry(page_table_t *page_table, u64 id, u64 *addr, u8 *flags)
+void *get_page_table_entry(page_table_t *page_table, size_t id, size_t *addr, u8 *flags)
 {
-    u64 entry = page_table->entries[id];
+    size_t entry = page_table->entries[id];
     *addr = (entry >> 8) << 8;
     *flags = entry & 0xFF;
 }
 
-page_table_t *get_page_table(page_table_t *page_table, u64 id)
+page_table_t *get_page_table(page_table_t *page_table, size_t id)
 {
-    u64 entry = page_table->entries[id];
+    size_t entry = page_table->entries[id];
     if (!(entry & 0b1))
         panic("Page table %u does not exist!\n", id);
     return (page_table_t *)((entry >> 8) << 8);
 }
 
-page_table_t *create_table(page_table_t *parent, u64 index)
+page_table_t *create_table(page_table_t *parent, size_t index)
 {
     if (!(parent->entries[index] & 0b1))
     {
         // Table doesn't exist - create one
-        u64 frame = (u64)allocate_frame();     // grab a new frame for the new table
-        parent->entries[index] = frame | 0b11; // present & writable flags
+        size_t frame = (size_t)allocate_frame(); // grab a new frame for the new table
+        parent->entries[index] = frame | 0b11;   // present & writable flags
 
         // Zero out new table
         page_table_t *new_table = (page_table_t *)frame;
-        for (u64 i = 0; i < ENTRY_COUNT; i++)
+        for (int i = 0; i < ENTRY_COUNT; i++)
         {
             new_table->entries[i] = 0;
         }
@@ -55,22 +55,22 @@ page_table_t *create_table(page_table_t *parent, u64 index)
     return (page_table_t *)((parent->entries[index] >> 8) << 8);
 }
 
-void translate_address(void *virt_addr, u64 *p4_index, u64 *p3_index, u64 *p2_index, u64 *p1_index, u64 *offset)
+void translate_address(void *virt_addr, size_t *p4_index, size_t *p3_index, size_t *p2_index, size_t *p1_index, size_t *offset)
 {
-    if ((u64)virt_addr >= 0x0000800000000000 && (u64)virt_addr < 0xffff800000000000)
+    if ((size_t)virt_addr >= 0x0000800000000000 && (size_t)virt_addr < 0xffff800000000000)
         // Invalid address - bits 48-64 must be the same as the 47th bit!
         panic("Invalid address %p\n", virt_addr);
 
-    *offset = (u64)virt_addr % PAGE_SIZE;
-    u64 virt_page_addr = (u64)virt_addr / PAGE_SIZE;
+    *offset = (size_t)virt_addr % PAGE_SIZE;
+    size_t virt_page_addr = (size_t)virt_addr / PAGE_SIZE;
 
-    *p4_index = ((u64)virt_page_addr >> 9 >> 9 >> 9) & 0777;
-    *p3_index = ((u64)virt_page_addr >> 9 >> 9) & 0777;
-    *p2_index = ((u64)virt_page_addr >> 9) & 0777;
-    *p1_index = ((u64)virt_page_addr) & 0777;
+    *p4_index = ((size_t)virt_page_addr >> 9 >> 9 >> 9) & 0777;
+    *p3_index = ((size_t)virt_page_addr >> 9 >> 9) & 0777;
+    *p2_index = ((size_t)virt_page_addr >> 9) & 0777;
+    *p1_index = ((size_t)virt_page_addr) & 0777;
 
     // printf("Transforming virt_addr ");
-    // writeInt((u64)virt_addr);
+    // writeInt((size_t)virt_addr);
     // printf(": P4 index ");
     // writeInt(*p4_index);
     // printf(", P3 index ");
@@ -84,20 +84,20 @@ void translate_address(void *virt_addr, u64 *p4_index, u64 *p3_index, u64 *p2_in
     // printf("\n");
 }
 
-u64 get_physaddr(void *virt_addr)
+size_t get_physaddr(void *virt_addr)
 {
-    u64 p4_index;
-    u64 p3_index;
-    u64 p2_index;
-    u64 p1_index;
-    u64 offset;
+    size_t p4_index;
+    size_t p3_index;
+    size_t p2_index;
+    size_t p1_index;
+    size_t offset;
     translate_address(virt_addr, &p4_index, &p3_index, &p2_index, &p1_index, &offset);
 
     page_table_t *p4 = level_4_table();
     page_table_t *p3 = get_page_table(p4, p4_index);
     page_table_t *p2 = get_page_table(p3, p3_index);
 
-    u64 addr;
+    size_t addr;
     u8 flags;
     get_page_table_entry(p2, p2_index, &addr, &flags);
     if (!(flags & 0b1))
@@ -120,16 +120,16 @@ u64 get_physaddr(void *virt_addr)
 
 void identity_map(void *virt_addr, u8 flags)
 {
-    map_page((u64)virt_addr, virt_addr, flags);
+    map_page((size_t)virt_addr, virt_addr, flags);
 }
 
-void map_page(u64 phys_addr, void *virt_addr, u8 flags)
+void map_page(size_t phys_addr, void *virt_addr, u8 flags)
 {
-    u64 p4_index;
-    u64 p3_index;
-    u64 p2_index;
-    u64 p1_index;
-    u64 offset;
+    size_t p4_index;
+    size_t p3_index;
+    size_t p2_index;
+    size_t p1_index;
+    size_t offset;
     translate_address(virt_addr, &p4_index, &p3_index, &p2_index, &p1_index, &offset);
 
     page_table_t *p4 = level_4_table();
@@ -140,7 +140,7 @@ void map_page(u64 phys_addr, void *virt_addr, u8 flags)
         if (phys_addr & 63)
             panic("Invalid physical frame - must be 4096 byte aligned!\n");
 
-        p2->entries[p2_index] = (u64)phys_addr | flags | 0x01;
+        p2->entries[p2_index] = (size_t)phys_addr | flags | 0x01;
     }
     else
     {
@@ -155,11 +155,11 @@ void map_page(u64 phys_addr, void *virt_addr, u8 flags)
 void unmap_page(void *virt_addr)
 {
 
-    u64 p4_index;
-    u64 p3_index;
-    u64 p2_index;
-    u64 p1_index;
-    u64 offset;
+    size_t p4_index;
+    size_t p3_index;
+    size_t p2_index;
+    size_t p1_index;
+    size_t offset;
     translate_address(virt_addr, &p4_index, &p3_index, &p2_index, &p1_index, &offset);
 
     page_table_t *p4 = level_4_table();
@@ -174,8 +174,8 @@ void unmap_page(void *virt_addr)
 
 void *allocate_page()
 {
-    u64 phys = (u64)allocate_frame();
-    u64 virt = phys;
+    size_t phys = (size_t)allocate_frame();
+    size_t virt = phys;
     map_page(phys, (void *)virt, 0b10);
     return (void *)virt;
 }

@@ -7,7 +7,7 @@
 
 #define VGA_MAX VGA_WIDTH *VGA_HEIGHT
 
-char virt_vga[VGA_MAX];
+char virt_vga[VGA_MAX * 2];
 char *vidptr = (char *)0xb8000;
 
 int current_pos = 0;
@@ -73,13 +73,12 @@ void vga_moveUp()
         {
             int prevPos = ((i - 1) * VGA_WIDTH) + j;
             int pos = (i * VGA_WIDTH) + j;
-            // virt_vga[prevPos * 2] = virt_vga[pos * 2];
+            virt_vga[prevPos * 2] = virt_vga[pos * 2];
             vidptr[prevPos * 2] = virt_vga[prevPos * 2];
-            // virt_vga[prevPos * 2 + 1] = virt_vga[pos * 2 + 1];
+            virt_vga[prevPos * 2 + 1] = virt_vga[pos * 2 + 1];
             vidptr[prevPos * 2 + 1] = virt_vga[prevPos * 2 + 1];
 
-            // setChar_save(' ', i, j); // Clear last line
-            setCharAtPos(' ', pos);
+            setChar_save(' ', i, j); // Clear last line
         }
     }
     current_pos -= VGA_WIDTH;
@@ -103,7 +102,7 @@ void vga_writeChar(char c)
         setCharAtPos_save(' ', --current_pos);
     else
     {
-        if (current_pos >= VGA_MAX)
+        while (current_pos >= VGA_MAX)
             vga_moveUp();
         setCharAtPos_save(c, current_pos++);
     }

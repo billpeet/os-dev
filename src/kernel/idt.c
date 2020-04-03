@@ -70,37 +70,7 @@ INTERRUPT void timer_handler(interrupt_frame_t *frame)
 {
     cli();
     handler_complete();
-
     ticks++;
-
-    static u64 last_task = 0;
-    static u64 i = 0;
-    if (last_task == running_task->id)
-        i++;
-    else
-        last_task = running_task->id;
-
-    // Pre-emptively switching tasks doesn't work yet!
-    bool preempt_switch = false;
-
-    if (preempt_switch && i % 10 == 0 && running_task != &main_task)
-    {
-        // Time's up for the current task - jump back to scheduler
-        // Save current task
-        printf("Forcing task %u to yield\n", running_task->id);
-        running_task->regs.rip = frame->rip;
-        u64 *old_stack = (u64 *)(frame->rsp - 8);
-        *old_stack = frame->rip;
-        running_task->regs.rsp = (u64)old_stack;
-        asm volatile("mov %%rbp, %0"
-                     : "=r"(running_task->regs.rbp));
-
-        running_task = &main_task;
-        frame->rip = running_task->regs.rip;
-        frame->rsp = running_task->regs.rsp;
-        frame->flags = running_task->regs.flags;
-        printf("frame has been set to rip %u, rsp %u\n", frame->rip, frame->rsp);
-    }
     sti();
 }
 
@@ -209,7 +179,7 @@ void unregister_tmhandler(int_handler_t handler)
     }
 }
 
-void setup_idt_entry(struct IDT_entry *entry, u64 handler_address, u16 options)
+void setup_idt_entry(struct IDT_entry *entry, size_t handler_address, u16 options)
 {
     entry->offset_lowerbits = (u16)handler_address;
     entry->selector = 8;
@@ -226,12 +196,12 @@ void init_interrupts()
     u16 options_present = 0b1000111000000000; // Present bit set (15)
     u16 options_trap = 0b1000111100000000;    // Present bit (15) and trap bit (8) set
 
-    setup_idt_entry(&idt[3], (u64)breakpoint_handler, options_trap);                    // Breakpoint exception
-    setup_idt_entry(&idt[8], (u64)double_fault_handler, options_present);               // Double fault exception
-    setup_idt_entry(&idt[13], (u64)general_protection_fault_handler, options_present);  // General protection fault exception
-    setup_idt_entry(&idt[14], (u64)page_fault_handler, options_present);                // Page fault exception
-    setup_idt_entry(&idt[TIMER_HANDLER_ID], (u64)timer_handler, options_trap);          // Timer interrupt
-    setup_idt_entry(&idt[KEYBOARD_HANDLER_ID], (u64)keyboard_handler, options_present); // Keyboard interrupt
+    setup_idt_entry(&idt[3], (size_t)breakpoint_handler, options_trap);                    // Breakpoint exception
+    setup_idt_entry(&idt[8], (size_t)double_fault_handler, options_present);               // Double fault exception
+    setup_idt_entry(&idt[13], (size_t)general_protection_fault_handler, options_present);  // General protection fault exception
+    setup_idt_entry(&idt[14], (size_t)page_fault_handler, options_present);                // Page fault exception
+    setup_idt_entry(&idt[TIMER_HANDLER_ID], (size_t)timer_handler, options_trap);          // Timer interrupt
+    setup_idt_entry(&idt[KEYBOARD_HANDLER_ID], (size_t)keyboard_handler, options_present); // Keyboard interrupt
 
     // Load IDT
     lidt(idt, sizeof(idt));

@@ -3,13 +3,14 @@
 #include "stdio.h"
 #include "x86.h"
 #include "vga.h"
+#include "kernel.h"
 
 #define QUEUE_SIZE 100
 
 struct queue
 {
     char chars[QUEUE_SIZE];
-    u64 front, rear, cnt;
+    size_t front, rear, cnt;
 } char_queue;
 
 static int disable_counter = 0;
@@ -41,6 +42,8 @@ void queue(char c)
     if (char_queue.cnt >= QUEUE_SIZE)
         return;
     lock_queue();
+    if (char_queue.rear >= QUEUE_SIZE)
+        panic("Char queue is full!\n");
     char_queue.chars[char_queue.rear++] = c;
     char_queue.cnt++;
     unlock_queue();
@@ -49,8 +52,6 @@ void queue(char c)
 char dequeue()
 {
     lock_queue();
-    if (char_queue.front >= QUEUE_SIZE)
-        panic("front has gone screwy again\n");
     char c = char_queue.chars[char_queue.front++];
     if (--char_queue.cnt == 0)
     {

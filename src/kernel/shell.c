@@ -8,7 +8,7 @@
 #include "frame_allocator.h"
 #include "paging.h"
 #include "kernel.h"
-#include "lba.h"
+#include "ata.h"
 #include "fat.h"
 #include "task.h"
 #include "x86.h"
@@ -16,7 +16,8 @@
 #include <stddef.h>
 
 char curr_cmd[100];
-char curr_param[100];
+u32 argc;
+char *argv[100];
 int pos;
 u8 current_drive;
 fat32_directory_t current_dir;
@@ -56,6 +57,8 @@ void change_drive(u8 drive_number)
     if (current_dir.entries != NULL)
         free(current_dir.entries);
     current_drive = drive_number;
+
+    init_drive(drive_number);
     current_dir = read_root_directory(drive_number);
     strcpy(current_dir_name, "\\");
     update_location_string();
@@ -66,28 +69,25 @@ void shell_line_init()
     printf(current_dir_str);
     printf("> ");
     for (int i = 0; i < 100; i++)
-    {
         curr_cmd[i] = '\0';
-        curr_param[i] = '\0';
-    }
+    argc = 0;
     pos = 0;
 }
 
 void shell_execute()
 {
-    putChar('\n');
+    putchar('\n');
 
+    bool cmd_init = false;
+    argc = 0;
     for (u16 i = 0; i < 100; i++)
     {
         if (curr_cmd[i] == ' ')
         {
             curr_cmd[i] = '\0';
-            for (u16 j = 0; j < 100 - i - 1; j++)
-            {
-                curr_param[j] = curr_cmd[i + j + 1];
-                curr_cmd[i + j + 1] = '\0';
-            }
-            break;
+            if (cmd_init)
+                argv[argc++] = curr_cmd + i + 1;
+            cmd_init = true;
         }
     }
 
@@ -139,47 +139,47 @@ void shell_execute()
     }
     else if (!strcasecmp(curr_cmd, "paging"))
     {
-        u64 ptr = 0x00000fffffeee010;
+        size_t ptr = 0x00000fffffeee010;
         ptr = 0x20003;
-        u64 phys_addr = get_physaddr((void *)ptr);
+        size_t phys_addr = get_physaddr((void *)ptr);
         printf("Phys_addr: 0x%p\n", phys_addr);
     }
     else if (!strcasecmp(curr_cmd, "recursive"))
     {
-        u64 l4_table_addr = (u64)level_4_table();
+        size_t l4_table_addr = (size_t)level_4_table();
         page_table_t *p4 = (page_table_t *)0xfffffffffffff000;
-        u64 phys_addr = get_physaddr(p4);
+        size_t phys_addr = get_physaddr(p4);
         printf("P4 table: 0x%p, phys_addr:0x%x, actual: 0x%u\n", p4, phys_addr, l4_table_addr);
         printf("Attempting to deallocate: %x\n", p4->entries[0]);
     }
     else if (!strcasecmp(curr_cmd, "newpage"))
     {
-        u64 ptr = 0x1;
+        size_t ptr = 0x1;
         ptr = 0x40000000; // P4 = 0, P3 = 1, P2 = 0, P1 = 0
         printf("Mapping new page\n");
         map_page(0x5000, (void *)ptr, 0b10);
         printf("Getting phys addr\n");
-        u64 phys_addr = get_physaddr((void *)ptr);
+        size_t phys_addr = get_physaddr((void *)ptr);
         printf("Phys_addr: %p\n", phys_addr);
     }
     else if (!strcasecmp(curr_cmd, "newhuge"))
     {
-        u64 ptr = 0x1;
+        size_t ptr = 0x1;
         ptr = 0x40000000; // P4 = 0, P3 = 1, P2 = 0, P1 = 0
         printf("Mapping new page\n");
         map_page(0x5000, (void *)ptr, 0b10000010); // huge
         printf("Getting phys addr\n");
-        u64 phys_addr = get_physaddr((void *)ptr);
+        size_t phys_addr = get_physaddr((void *)ptr);
         printf("Phys_addr: %p\n", phys_addr);
     }
     else if (!strcasecmp(curr_cmd, "unmap"))
     {
-        u64 ptr = 0x1;
+        size_t ptr = 0x1;
         ptr = 0x40000000; // P4 = 0, P3 = 1, P2 = 0, P1 = 0
         printf("Mapping new page\n");
         map_page(0x5000, (void *)ptr, 0b10);
         printf("Getting phys addr\n");
-        u64 phys_addr = get_physaddr((void *)ptr);
+        size_t phys_addr = get_physaddr((void *)ptr);
         printf("Phys_addr: %p\n", phys_addr);
         int *int_ptr = (int *)ptr;
         printf("Here's its value: %i\n", int_ptr);
@@ -222,8 +222,8 @@ void shell_execute()
     }
     else if (!strcasecmp(curr_cmd, "breakpoint"))
     {
-        printf("Triggering breakpoint exception:\n");
-        asm("int3");
+        printf("Triggering breakpoint:\n");
+        int3();
     }
     else if (!strcasecmp(curr_cmd, "pagefault"))
     {
@@ -234,58 +234,43 @@ void shell_execute()
     else if (!strcasecmp(curr_cmd, "divbyzero"))
     {
         printf("Triggering divide by zero exception:\n");
-        int i = 0;
-        i /= i;
+        int i = 2;
+        int j = 0;
+        i /= j;
     }
-    else if (!strcasecmp(curr_cmd, "lba"))
+    else if (!strcasecmp(curr_cmd, "lbaread"))
     {
         u8 *ptr = malloc(sizeof(lba_sector_t));
-        u8 *ptr2 = malloc(sizeof(lba_sector_t));
-        u32 sector = 0;
-        read_sectors_lba(0, sector, 1, (lba_sector_t *)ptr);
-        read_sectors_lba(0, sector, 1, (lba_sector_t *)ptr2);
-        printf("Before 1: ");
+        u32 sector = 3524;
+        read_sectors_ata(0, sector, 1, (lba_sector_t *)ptr);
+        printf("Sector %u: ", sector);
         for (int i = 0; i < SECTOR_SIZE; i++)
-        {
             printf("%x", ptr[i]);
-        }
-        printf("\nBefore 2: ");
-        for (int i = 0; i < SECTOR_SIZE; i++)
-        {
-            printf("%x", ptr2[i]);
-        }
         printf("\n");
-
-        // ptr[0] = 0xaa;
-        // ptr[1] = 0xbb;
-        // ptr[2] = 0xcc;
-        // ptr[3] = 0xdd;
-
-        // write_sectors_lba(0, sector, 1, (lba_sector_t *)ptr);
-        // ptr[0] = 0x00;
-        // read_sectors_lba(0, sector, 1, (lba_sector_t *)ptr);
-        // printf("\nAfter: ");
-        // for (int i = 0; i < SECTOR_SIZE; i++)
-        // {
-        //     printf("%x", ptr[i]);
-        // }
-        // putChar('\n');
+    }
+    else if (!strcasecmp(curr_cmd, "lbawrite"))
+    {
+        u8 *ptr = malloc(sizeof(lba_sector_t));
+        u32 sector = 3524;
+        strcpy((char *)ptr, "LOL");
+        write_sectors_ata(0, sector, 1, (lba_sector_t *)ptr);
     }
     else if (!strcasecmp(curr_cmd, "dir"))
     {
-        dump_directory(current_dir);
+        dump_directory(&current_dir);
     }
     else if (!strcasecmp(curr_cmd, "cd"))
     {
-        putChar('\n');
-        if (curr_param[0] == '\0' || curr_param[0] == ' ')
+        putchar('\n');
+        if (argc == 0 || argv[0][0] == '\0')
         {
             printf(current_dir_str);
             printf("\n");
         }
         else
         {
-            fat32_entry_t *entry = find_sub_directory(current_dir, curr_param);
+            char *file_name = argv[0];
+            fat32_entry_t *entry = find_sub_directory(&current_dir, file_name);
             if (entry == NULL)
                 printf("Invalid directory\n");
             else
@@ -295,7 +280,7 @@ void shell_execute()
                     free(current_dir.entries);
                 printf("Cluster number: %u\n", cluster_number);
                 current_dir = read_directory(current_drive, cluster_number);
-                if (strcmp(curr_param, ".") != 0)
+                if (strcmp(file_name, ".") != 0)
                 {
                     char *c = current_dir_name;
                     if (*c != 0)
@@ -303,7 +288,7 @@ void shell_execute()
                         while (*c != '\0')
                             c++;
                     }
-                    if (strcmp(curr_param, "..") == 0)
+                    if (strcmp(file_name, "..") == 0)
                     {
                         while (c > current_dir_name + 1 && *c != '\\')
                             c--;
@@ -313,7 +298,7 @@ void shell_execute()
                     {
                         if (c > current_dir_name + 2)
                             *c++ = '\\';
-                        strcpy(c, curr_param);
+                        strcpy(c, file_name);
                     }
                     update_location_string();
                 }
@@ -323,22 +308,22 @@ void shell_execute()
     else if (!strcasecmp(curr_cmd, "cat"))
     {
         printf("\n");
-        if (curr_param[0] == '\0' || curr_param[0] == ' ')
+        if (argc == 0 || argv[0][0] == '\0')
         {
             printf(current_dir_str);
             printf("\n");
         }
         else
         {
+            char *file_name = argv[0];
             u32 file_size;
-            u8 *file_ptr = read_file(current_drive, current_dir, curr_param, &file_size);
+            u8 *file_ptr = read_file(&current_dir, file_name, &file_size);
             if (file_ptr == NULL)
                 printf("File not found\n");
             else
             {
-                printf("File size %u\n", file_size);
-                for (int i = 0; i < file_size /*&& i < 100*/; i++)
-                    printf("%i", file_ptr[i]);
+                for (int i = 0; i < file_size; i++)
+                    printf("%c", file_ptr[i]);
                 printf("\n");
                 free(file_ptr);
             }
@@ -347,16 +332,30 @@ void shell_execute()
     else if (!strcasecmp(curr_cmd, "touch"))
     {
         printf("\n");
-        if (curr_param[0] == '\0' || curr_param[0] == ' ')
-        {
-            printf("No file provided\n");
-        }
+        if (argc == 0 || argv[0][0] == '\0')
+            printf("Usage: touch <file-name>\n");
         else
         {
-            u32 file_size = 2;
-            printf("Adding file %s\n", curr_param);
-            create_file(current_drive, current_dir, curr_param, ".txt", file_size);
-            printf("Added file %s\n", curr_param);
+            u32 file_size = 0;
+            create_file(&current_dir, argv[0], "txt", file_size, 0);
+        }
+    }
+    else if (!strcasecmp(curr_cmd, "write"))
+    {
+        printf("\n");
+        if (argc == 0 || argv[0][0] == '\0')
+            printf("Usage: write <file-name>\n");
+        else
+        {
+            u32 file_size;
+            u8 *file_ptr = read_file(&current_dir, argv[0], &file_size);
+            if (file_ptr == NULL)
+                printf("File %s not found\n", argv[0]);
+            char *file_str = (char *)file_ptr;
+            char *message = "Peanuts";
+            strcpy(file_str, message);
+            write_file(&current_dir, argv[0], file_ptr, strlen(message));
+            free(file_ptr);
         }
     }
     else if (!strcasecmp(curr_cmd, "tskmgr"))
@@ -368,22 +367,25 @@ void shell_execute()
         printf("Rebooting...\n");
         reboot();
     }
+    else if (!strcasecmp(curr_cmd, "cpl"))
+    {
+        u8 c = cpl();
+        printf("\nCurrent Protection Level: %u\n", c);
+    }
     else
     {
-        // Attempt to find executable file with this name
+        // Attempt to find executable file with this name (unfinished)
         printf("\n");
         if (curr_cmd[0] != '\0' && curr_cmd[0] != ' ')
         {
             u32 file_size;
-            u8 *file_ptr = read_file(current_drive, current_dir, curr_param, &file_size);
+            u8 *file_ptr = read_file(&current_dir, argv[0], &file_size);
             if (file_ptr == NULL)
                 printf("Unrecognised command '%s'\n", curr_cmd);
             else
             {
-                printf("File size %u\n", file_size);
-                for (int i = 0; i < file_size /*&& i < 100*/; i++)
-                    printf("%i", file_ptr[i]);
-                printf("\n");
+                // TODO: execute command
+                printf("Executing %s\n", curr_cmd);
                 free(file_ptr);
             }
         }
@@ -401,13 +403,13 @@ void shell(void)
 
     while (1)
     {
-        char c = readChar();
+        char c = getchar();
         if (c == '\b')
         {
             if (pos > 0)
             {
                 curr_cmd[--pos] = '\0';
-                putChar(c);
+                putchar(c);
             }
         }
         else if (c == '\n')
@@ -416,7 +418,7 @@ void shell(void)
         }
         else
         {
-            putChar(c);
+            putchar(c);
             curr_cmd[pos++] = c;
         }
     }

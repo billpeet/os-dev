@@ -2,7 +2,7 @@
 #define FAT_H
 
 #include "types.h"
-#include "lba.h"
+#include "ata.h"
 #include "gcc-attributes.h"
 
 typedef struct fat32_boot_sector
@@ -68,19 +68,21 @@ typedef struct fat32_directory
     fat32_entry_t *entries;
 } fat32_directory_t;
 
-void get_header(u8 drive_number, fat32_boot_sector_t *header);
+int init_drive(u32 drive_number);
 
 fat32_directory_t read_directory(u8 drive_number, int cluster_number);
 fat32_directory_t read_root_directory(u8 drive_number);
 
 u32 get_cluster_number(fat32_entry_t *f);
 
-void dump_directory(fat32_directory_t dir);
+void dump_directory(fat32_directory_t *dir);
 
-fat32_entry_t *find_sub_directory(fat32_directory_t current_dir, char *subdir_name);
+fat32_entry_t *find_sub_directory(fat32_directory_t *dir, char *subdir_name);
 
-void *read_file(u8 drive_number, fat32_directory_t current_dir, char *file_name, u32 *size);
+void *read_file(fat32_directory_t *dir, char *file_name, u32 *size);
 
-u32 create_file(u8 drive_number, fat32_directory_t dir, char *name, char *ext, u32 file_size);
+u32 create_file(fat32_directory_t *dir, char *name, char *ext, u32 file_size, u8 flags);
+
+int write_file(fat32_directory_t *dir, char *file_name, u8 *buffer, u32 size);
 
 #endif

@@ -4,6 +4,7 @@
 #include "console.h"
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 
 static bool shift;
 static bool ctrl;

@@ -29,6 +29,8 @@ switch_task:
     cmp rax, rcx            ; Has the virtual space changed? If not, don't bother setting CR3
     je .doneVAS
 
+    mov cr3, rcx
+
 .doneVAS:
     ; pop rbp
     ; pop rsi

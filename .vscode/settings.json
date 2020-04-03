@@ -22,6 +22,14 @@
         "x86.h": "c",
         "cctype": "c",
         "gcc-attributes.h": "c",
-        "keyboard.h": "c"
+        "keyboard.h": "c",
+        "array": "c",
+        "string_view": "c",
+        "initializer_list": "c",
+        "utility": "c",
+        "ctype.h": "c",
+        "errno.h": "c",
+        "float.h": "c",
+        "cstring": "c"
     }
 }
