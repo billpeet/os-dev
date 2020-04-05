@@ -1,6 +1,7 @@
 #include "pi.h"
-#include "types.h"
+#include <stdlib.h>
 #include <stdbool.h>
+#include "types.h"
 #include "stdio.h"
 #include "task.h"
 
@@ -56,5 +57,5 @@ void get_primes()
             }
         }
     }
-    kill();
+    exit(0);
 }

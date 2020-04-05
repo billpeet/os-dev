@@ -2,7 +2,7 @@
 #define FAT_H
 
 #include "types.h"
-#include "ata.h"
+#include "drivers/ata.h"
 #include "gcc-attributes.h"
 
 typedef struct fat32_boot_sector

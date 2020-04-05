@@ -1,4 +1,6 @@
 #include "kernel.h"
+#include <stdarg.h>
+#include <stdlib.h>
 #include "vga.h"
 #include "stdio.h"
 #include "idt.h"
@@ -8,7 +10,7 @@
 #include "types.h"
 #include "boot_info.h"
 #include "alloc.h"
-#include "ata.h"
+#include "drivers/ata.h"
 #include "task.h"
 #include "x86.h"
 #include "pi.h"
@@ -18,7 +20,6 @@
 #include "keyboard.h"
 #include "tester.h"
 #include "gdt.h"
-#include <stdarg.h>
 
 extern u16 code_selector;
 
@@ -60,7 +61,7 @@ static void other_main()
         yield();
     }
     printf("other_main complete\n");
-    kill();
+    exit(0);
 }
 
 static void other_main2_sub()
@@ -72,7 +73,7 @@ static void other_main2_sub()
         yield();
     }
     printf("task1 complete, dying now\n");
-    kill();
+    exit(0);
 }
 
 static void other_main2()
@@ -84,8 +85,8 @@ static void sleeping_task()
 {
     printf("Starting sleeping task!\n");
     sleep();
-    printf("Waken up!\n");
-    kill();
+    printf("Woken up!\n");
+    exit(1);
 }
 
 NORETURN void kmain(boot_info_t *boot_info)
@@ -105,11 +106,11 @@ NORETURN void kmain(boot_info_t *boot_info)
 
     tester();
 
-    dump_entry(&gdt64[0]);
-    dump_entry(&gdt64[1]);
-    dump_entry(&gdt64[2]);
+    // dump_entry(&gdt64[0]);
+    // dump_entry(&gdt64[1]);
+    // dump_entry(&gdt64[2]);
 
-    init_ring3();
+    // init_ring3();
 
     u64 flags = main_task.regs.flags;
     u64 cr3 = main_task.regs.cr3;

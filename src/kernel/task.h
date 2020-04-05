@@ -31,6 +31,7 @@ typedef struct task
     u32 interrupt_id;
     u32 id;
     u64 time_spent;
+    void (*atexit)(void);
 } task_t;
 
 extern void init_tasking();
@@ -47,7 +48,6 @@ extern void sleep();
 extern void wait_for_interrupt(u32 interrupt_id);
 extern void wake(task_t *task);
 extern void wake_interrupt(u32 interrupt_id);
-extern void kill();
 extern void yield();
 extern void switch_task(registers_t *next);
 

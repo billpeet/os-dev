@@ -1,19 +1,20 @@
 #include "shell.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 #include "idt.h"
 #include "stdio.h"
 #include "vga.h"
 #include "pong.h"
-#include "alloc.h"
-#include "string.h"
 #include "frame_allocator.h"
 #include "paging.h"
 #include "kernel.h"
-#include "ata.h"
+#include "drivers/ata.h"
 #include "fat.h"
 #include "task.h"
 #include "x86.h"
-#include <stdbool.h>
-#include <stddef.h>
 
 char curr_cmd[100];
 u32 argc;
@@ -194,15 +195,12 @@ void shell_execute()
         *a = 23; // dereference to check it's valid
         free(a);
         u64 *b = malloc(sizeof(u64));
-        if ((u64)b == (u64)a)
-            printf("ASSERT 1 FAILED\n"); // Check 1: won't attempt to use a free area that's too small
-        free(b);                         // a & b are now free
+        assert((size_t)b != (size_t)a); // Check 1: won't attempt to use a free area that's too small
+        free(b);                        // a & b are now free
         u32 *c = malloc(sizeof(u32));
-        if ((u64)c != (u64)b)
-            printf("ASSERT 2 FAILED\n"); // Check 2: will use a free area that's larger than the right size
+        assert((size_t)c == (size_t)b); // Check 2: will use a free area that's larger than the right size
         u32 *d = malloc(sizeof(u32));
-        if ((u64)d != (u64)a)
-            printf("ASSERT 3 FAILED\n"); // Check 3: will use a free area that's the right size
+        assert((size_t)d == (size_t)a); // Check 3: will use a free area that's the right size
 
         void *e = malloc(sizeof(u8));
         void *f = malloc(sizeof(u8));
@@ -215,8 +213,18 @@ void shell_execute()
         free(h);
 
         void *j = malloc(sizeof(u32));
-        if ((u64)j != (u64)i)
-            printf("ASSERT 4 FAILED\n"); // Check 4: will find a suitable free area that was freed several steps ago
+        assert((size_t)j == (size_t)i); // Check 4: will find a suitable free area that was freed several steps ago
+        free(j);
+
+        char *str = calloc(4, sizeof(char));
+        strcpy(str, "LOL");
+        assert(strcmp(str, "LOL") == 0);
+        char *new_str = realloc(str, sizeof(char) * 2);
+        assert(new_str == str);
+        new_str = realloc(new_str, sizeof(char) * 9);
+        assert(new_str != str);
+        strcpy(new_str, "lollipop");
+        assert(strcmp(new_str, "lollipop") == 0);
 
         printf("All tests passed!\n");
     }

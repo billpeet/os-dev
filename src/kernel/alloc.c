@@ -5,6 +5,8 @@
 #include "stdio.h"
 #include "kernel.h"
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define HEAP_SIZE 1000 * PAGE_SIZE // 1000 KiB
 #define HEAP_START 0x444444440000
@@ -66,9 +68,20 @@ void *malloc(size_t size)
     return (u8 *)header + sizeof(heap_header_t);
 }
 
+void *realloc(void *ptr, size_t size)
+{
+    heap_header_t *header = (heap_header_t *)ptr - 1;
+    if (header->size >= size)
+        return ptr;
+    void *new_ptr = malloc(size);
+    memcpy(new_ptr, ptr, header->size);
+    free(ptr);
+    return new_ptr;
+}
+
 void free(void *ptr)
 {
-    heap_header_t *header = (heap_header_t *)((u8 *)ptr - sizeof(heap_header_t));
+    heap_header_t *header = (heap_header_t *)ptr - 1;
     header->next = free_head;
     free_head = header;
 }

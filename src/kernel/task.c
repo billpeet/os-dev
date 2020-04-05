@@ -7,6 +7,7 @@
 #include "idt.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #define MAX_TASKS 64
 #define MAX_LOCKS 64
@@ -91,8 +92,8 @@ task_t *create_task(void (*main)(), u64 flags, u64 cr3)
     return task;
 }
 
-// Remove running task from schedule and return to scheduler
-void kill()
+// Exits abnormally
+void abort()
 {
     if (running_task != &main_task)
     {
@@ -101,6 +102,20 @@ void kill()
         display_current_task();
         switch_task(&running_task->regs);
     }
+}
+
+// Exits normally, with status code
+void exit(int status)
+{
+    if (running_task->atexit)
+        running_task->atexit();
+    abort();
+}
+
+// Sets a function to run on program exit
+int atexit(void (*func)(void))
+{
+    running_task->atexit = func;
 }
 
 // Locks memory address

@@ -1,11 +1,11 @@
 #include "fat.h"
-#include "stdio.h"
-#include "frame_allocator.h"
-#include "alloc.h"
-#include "kernel.h"
+#include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
 #include <ctype.h>
+#include "stdio.h"
+#include "frame_allocator.h"
+#include "kernel.h"
 
 #define SECTORS_PER_FAT 1539
 #define FAT_ENTRIES SECTORS_PER_FAT *SECTOR_SIZE / sizeof(u32)
