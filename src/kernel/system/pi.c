@@ -1,9 +1,9 @@
 #include "pi.h"
 #include <stdlib.h>
 #include <stdbool.h>
-#include "types.h"
-#include "stdio.h"
-#include "task.h"
+#include <types.h>
+#include <stdio.h>
+#include "../task.h"
 
 u64 sqrt(u64 n)
 {

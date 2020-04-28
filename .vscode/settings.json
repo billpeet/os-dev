@@ -30,6 +30,8 @@
         "ctype.h": "c",
         "errno.h": "c",
         "float.h": "c",
-        "cstring": "c"
+        "cstring": "c",
+        "console.h": "c",
+        "stdlib.h": "c"
     }
 }

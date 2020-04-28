@@ -3,7 +3,8 @@
 #include <string.h>
 #include <stddef.h>
 #include <ctype.h>
-#include "stdio.h"
+#include <stdio.h>
+#include <stdbool.h>
 #include "frame_allocator.h"
 #include "kernel.h"
 
@@ -12,13 +13,55 @@
 #define INTCEIL(x, y) (x + y - 1) / y
 #define END_CLUSTER 0xFFFFFFF
 
+#define FILENAME_LENGTH 8
+#define EXTENSION_LENGTH 3
+
 typedef struct fat32_disk_cache
 {
     fat32_boot_sector_t boot_sector;
     u32 fat[FAT_ENTRIES];
+    fat32_directory_t root_dir;
 } fat32_disk_cache_t;
 
 fat32_disk_cache_t fat32_disks[10];
+
+// Gets string with '[FILENAME].[EXT]' from separate filename/ext fields
+void *get_filename(const char *filename, const char *ext, char *dest)
+{
+    int space = -1, i;
+
+    strcpy(dest, filename);
+    for (i = 0; i < 8; i++)
+    {
+        if (filename[i] == ' ')
+        {
+            if (space == -1)
+                space = i;
+        }
+        else
+            // non-space, reset last space pointer
+            space = -1;
+    }
+    if (space == -1)
+        space = 8;
+
+    if (ext[0] == ' ')
+    {
+        // no extension
+        dest[space] = '\0';
+    }
+    else
+    {
+        dest[space++] = '.';
+        for (i = 0; i < 3; i++)
+        {
+            if (ext[i] == ' ')
+                break;
+            dest[i + space] = ext[i];
+        }
+        dest[i + space] = '\0';
+    }
+}
 
 fat32_boot_sector_t *get_bs(u8 drive_number)
 {
@@ -28,6 +71,11 @@ fat32_boot_sector_t *get_bs(u8 drive_number)
 u32 *get_fat(u8 drive_number)
 {
     return fat32_disks[drive_number].fat;
+}
+
+fat32_directory_t *get_root(u8 drive_number)
+{
+    return &fat32_disks[drive_number].root_dir;
 }
 
 // Reads boot sector header from disk
@@ -58,13 +106,13 @@ void save_fat(u8 drive_number)
 int init_drive(u32 drive_number)
 {
     // Load new header into cache
-    fat32_boot_sector_t *boot_sector = &fat32_disks[drive_number].boot_sector;
-    u32 *fat = fat32_disks[drive_number].fat;
+    fat32_disk_cache_t *disk_cache = &fat32_disks[drive_number];
 
-    read_header(drive_number, boot_sector);
-    read_fat(drive_number, fat);
+    read_header(drive_number, &disk_cache->boot_sector);
+    read_fat(drive_number, disk_cache->fat);
+    disk_cache->root_dir = read_root_directory(drive_number);
 
-    if (boot_sector->sig != 0xaa55)
+    if (disk_cache->boot_sector.sig != 0xaa55)
     {
         printf("Invalid FAT disk!\n");
         return 0;
@@ -83,7 +131,7 @@ int is_long_name(fat32_entry_t *entry)
 }
 
 // Reads directory from disk
-fat32_directory_t read_directory(u8 drive_number, int cluster_number)
+fat32_directory_t read_directory(u8 drive_number, int cluster_number, const char *path)
 {
     fat32_directory_t dir;
     dir.drive_number = drive_number;
@@ -98,17 +146,22 @@ fat32_directory_t read_directory(u8 drive_number, int cluster_number)
 
     u32 sector_number = cluster_start + (dir.cluster - 2) * boot_sector->sectors_per_cluster;
 
-    lba_sector_t *cluster = malloc(sizeof(lba_sector_t) * boot_sector->sectors_per_cluster);
+    lba_sector_t *cluster = calloc(boot_sector->sectors_per_cluster, sizeof(lba_sector_t));
     read_sectors_ata(drive_number, sector_number, boot_sector->sectors_per_cluster, cluster);
 
     dir.entries = (fat32_entry_t *)cluster;
+    strcpy(dir.path, path);
     return dir;
 }
 
 // Reads root directory to cache
 fat32_directory_t read_root_directory(u8 drive_number)
 {
-    return read_directory(drive_number, 0);
+    // Path is in form 'C:\'
+    char path[4];
+    path[0] = drive_number + 67;
+    strcpy(path + 1, ":\\");
+    return read_directory(drive_number, 0, path);
 }
 
 void *read_cluster(u32 drive_number, u32 cluster_number, void *buffer)
@@ -134,13 +187,9 @@ void save_cluster(u8 drive_number, u32 cluster_number, void *ptr)
 void save_directory(fat32_directory_t *dir)
 {
     save_cluster(dir->drive_number, dir->cluster, dir->entries);
-    // fat32_boot_sector_t *boot_sector = get_bs(dir->drive_number);
-    // u32 cluster_start = boot_sector->reserved_sectors + (boot_sector->fat_copies * boot_sector->sectors_per_fat);
-    // u32 sector_number = cluster_start + (dir->cluster - 2) * boot_sector->sectors_per_cluster;
-    // write_sectors_ata(dir->drive_number, sector_number, boot_sector->sectors_per_cluster, (lba_sector_t *)dir->entries);
 }
 
-#pragma region Dumps
+#pragma region dumps
 
 // Dumps boot sector header info
 void dump_header(fat32_boot_sector_t *header)
@@ -191,24 +240,9 @@ void dump_fat32_entry(fat32_entry_t *entry)
     putchar(entry->flags & 0b1 ? 'r' : '-');
     printf("     ");
 
-    for (u32 i = 0; i < 8; i++)
-    {
-        if (entry->filename[i] == ' ')
-            break;
-        putchar(entry->filename[i]);
-    }
-
-    if (entry->extension[0] != ' ')
-    {
-        putchar('.');
-        for (u32 i = 0; i < 3; i++)
-        {
-            if (entry->extension[i] == ' ')
-                break;
-            putchar(entry->extension[i]);
-        }
-    }
-    putchar('\n');
+    char filename[15];
+    get_filename(entry->filename, entry->extension, filename);
+    printf("%s\n", filename);
 }
 
 // Windows-style 'dir' command
@@ -236,40 +270,23 @@ void dump_directory(fat32_directory_t *dir)
     putchar('\n');
 }
 
+#pragma endregion
+
 u32 get_cluster_number(fat32_entry_t *f)
 {
     return (f->first_cluster_high << 16) | f->first_cluster_low;
 }
 
-#pragma endregion
-
 // Finds directory entry with specified name
-fat32_entry_t *find_entry(fat32_directory_t *current_dir, char *entry_name, u8 is_dir)
+fat32_entry_t *find_entry(fat32_directory_t *current_dir, const char *entry_name, u8 is_dir)
 {
-    for (u32 i = 0; current_dir->entries[i].filename[0]; i++)
+    char filename[15];
+    for (int i = 0; current_dir->entries[i].filename[0]; i++)
     {
-        char filename[13];
-        for (u32 j = 0; j < 8; j++)
-        {
-            if (current_dir->entries[i].filename[j] == ' ')
-            {
-                filename[j] = '.';
-                j++;
-                for (u32 k = 0; k < 3; k++)
-                {
-                    if (current_dir->entries[i].extension[k] == ' ')
-                    {
-                        filename[j] = '\0';
-                        break;
-                    }
-                    filename[j + k] = current_dir->entries[i].extension[k];
-                }
-                break;
-            }
-            filename[j] = current_dir->entries[i].filename[j];
-        }
-
-        if (!(current_dir->entries[i].flags & 0b10000) == !is_dir && !strcasecmp(entry_name, filename))
+        if (!(current_dir->entries[i].flags & 0b10000) == is_dir)
+            continue;
+        get_filename(current_dir->entries[i].filename, current_dir->entries[i].extension, filename);
+        if (!strcasecmp(entry_name, filename))
             return &current_dir->entries[i];
     }
     return NULL;
@@ -278,6 +295,40 @@ fat32_entry_t *find_entry(fat32_directory_t *current_dir, char *entry_name, u8 i
 fat32_entry_t *find_sub_directory(fat32_directory_t *current_dir, char *subdir_name)
 {
     return find_entry(current_dir, subdir_name, 1);
+}
+
+int load_sub_directory(fat32_directory_t *current_dir, char *subdir_name, fat32_directory_t *dest)
+{
+    if (strcmp(subdir_name, ".") == 0)
+    {
+        // Just copy directory across - caller needs to make sure they check before freeing current_dir's entries!
+        *dest = *current_dir;
+        return 1;
+    }
+    fat32_entry_t *entry = find_sub_directory(current_dir, subdir_name);
+    if (entry == NULL)
+        return 0;
+    u32 cluster_number = get_cluster_number(entry);
+
+    char path[100];
+    strcpy(path, current_dir->path);
+    if (subdir_name[0] == '.')
+    {
+        // current dir '.' or parent dir '..'
+        path[strlen(path) - 1] = '\0'; // Remove last slash
+        char *tmp = strrchr(path, '\\');
+        tmp++;
+        *tmp = '\0';
+    }
+    else
+    {
+        // subdir name - add subdir and '\' to the end of the path
+        strcat(path, subdir_name);
+        strcat(path, "\\");
+    }
+
+    *dest = read_directory(current_dir->drive_number, cluster_number, path);
+    return 1;
 }
 
 void *read_file(fat32_directory_t *dir, char *file_name, u32 *size)
@@ -473,5 +524,28 @@ int write_file(fat32_directory_t *dir, char *file_name, u8 *buffer, u32 size)
     save_directory(dir);
     save_fat(dir->drive_number);
 
+    return 1;
+}
+
+int rename(const char *old_filename, const char *new_filename)
+{
+    // TODO: handle absolute path including subdirectories
+    // TODO: find disk number from file path?
+    // TODO: handle file extensions
+    fat32_entry_t *file = find_entry(&fat32_disks[0].root_dir, old_filename, 0);
+    if (file == NULL)
+        return 0;
+    bool filename_end = false;
+    for (int i = 0; i < FILENAME_LENGTH; i++)
+    {
+        if (filename_end || new_filename[i] == '\0')
+        {
+            file->filename[i] = ' ';
+            filename_end = true;
+        }
+        else
+            file->filename[i] = new_filename[i];
+    }
+    save_directory(&fat32_disks[0].root_dir);
     return 1;
 }

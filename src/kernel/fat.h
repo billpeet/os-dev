@@ -64,20 +64,21 @@ typedef struct fat32_entry
 typedef struct fat32_directory
 {
     u8 drive_number;
+    char path[100];
     u32 cluster;
     fat32_entry_t *entries;
 } fat32_directory_t;
 
 int init_drive(u32 drive_number);
 
-fat32_directory_t read_directory(u8 drive_number, int cluster_number);
+fat32_directory_t read_directory(u8 drive_number, int cluster_number, const char *path);
 fat32_directory_t read_root_directory(u8 drive_number);
 
 u32 get_cluster_number(fat32_entry_t *f);
 
 void dump_directory(fat32_directory_t *dir);
 
-fat32_entry_t *find_sub_directory(fat32_directory_t *dir, char *subdir_name);
+int load_sub_directory(fat32_directory_t *current_dir, char *subdir_name, fat32_directory_t *dest);
 
 void *read_file(fat32_directory_t *dir, char *file_name, u32 *size);
 

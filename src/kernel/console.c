@@ -1,8 +1,8 @@
 #include "console.h"
 #include "types.h"
-#include "stdio.h"
+#include <stdio.h>
 #include "x86.h"
-#include "vga.h"
+#include "drivers/vga.h"
 #include "kernel.h"
 
 #define QUEUE_SIZE 100

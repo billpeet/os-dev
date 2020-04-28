@@ -1,6 +1,6 @@
 #include "frame_allocator.h"
 #include "types.h"
-#include "stdio.h"
+#include <stdio.h>
 #include "boot_info.h"
 #include "kernel.h"
 #include <stdbool.h>

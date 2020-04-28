@@ -4,14 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
+#include "drivers/vga.h"
+#include "drivers/ata.h"
+#include "system/pong.h"
 #include "idt.h"
-#include "stdio.h"
-#include "vga.h"
-#include "pong.h"
 #include "frame_allocator.h"
 #include "paging.h"
 #include "kernel.h"
-#include "drivers/ata.h"
 #include "fat.h"
 #include "task.h"
 #include "x86.h"
@@ -22,8 +22,6 @@ char *argv[100];
 int pos;
 u8 current_drive;
 fat32_directory_t current_dir;
-char current_dir_name[100] = "\\";
-char current_dir_str[100] = "C:\\";
 task_t *shell_task;
 bool cmd_in_progress;
 
@@ -40,34 +38,20 @@ int starts_with(char *input, char const *check)
     return 1;
 }
 
-void update_location_string()
-{
-    current_dir_str[0] = current_drive + 67;
-    current_dir_str[1] = ':';
-
-    u16 i;
-    for (i = 0; current_dir_name[i] != '\0'; i++)
-    {
-        current_dir_str[i + 2] = current_dir_name[i];
-    }
-    current_dir_str[i + 2] = '\0';
-}
-
 void change_drive(u8 drive_number)
 {
-    if (current_dir.entries != NULL)
+    if (strcmp(current_dir.path, "\\") != 0 && current_dir.entries != NULL)
+        // Free if it isn't a subdirectory
         free(current_dir.entries);
     current_drive = drive_number;
 
     init_drive(drive_number);
     current_dir = read_root_directory(drive_number);
-    strcpy(current_dir_name, "\\");
-    update_location_string();
 }
 
 void shell_line_init()
 {
-    printf(current_dir_str);
+    printf(current_dir.path);
     printf("> ");
     for (int i = 0; i < 100; i++)
         curr_cmd[i] = '\0';
@@ -79,16 +63,15 @@ void shell_execute()
 {
     putchar('\n');
 
-    bool cmd_init = false;
     argc = 0;
     for (u16 i = 0; i < 100; i++)
     {
         if (curr_cmd[i] == ' ')
         {
+            printf("space detected\n");
             curr_cmd[i] = '\0';
-            if (cmd_init)
-                argv[argc++] = curr_cmd + i + 1;
-            cmd_init = true;
+            printf("arg %u\n", argc);
+            argv[argc++] = curr_cmd + i + 1;
         }
     }
 
@@ -272,44 +255,21 @@ void shell_execute()
         putchar('\n');
         if (argc == 0 || argv[0][0] == '\0')
         {
-            printf(current_dir_str);
+            printf(current_dir.path);
             printf("\n");
         }
         else
         {
-            char *file_name = argv[0];
-            fat32_entry_t *entry = find_sub_directory(&current_dir, file_name);
-            if (entry == NULL)
-                printf("Invalid directory\n");
+            char *dir_name = argv[0];
+            fat32_directory_t new_dir;
+            if (load_sub_directory(&current_dir, dir_name, &new_dir) == 0)
+                printf("Invalid directory '%s'\n", dir_name);
             else
             {
-                u32 cluster_number = get_cluster_number(entry);
-                if (current_dir.entries != NULL)
+                // Success - free old directory
+                if (strcmp(current_dir.path, new_dir.path) != 0 && strlen(current_dir.path) > 3)
                     free(current_dir.entries);
-                printf("Cluster number: %u\n", cluster_number);
-                current_dir = read_directory(current_drive, cluster_number);
-                if (strcmp(file_name, ".") != 0)
-                {
-                    char *c = current_dir_name;
-                    if (*c != 0)
-                    {
-                        while (*c != '\0')
-                            c++;
-                    }
-                    if (strcmp(file_name, "..") == 0)
-                    {
-                        while (c > current_dir_name + 1 && *c != '\\')
-                            c--;
-                        *c = '\0';
-                    }
-                    else
-                    {
-                        if (c > current_dir_name + 2)
-                            *c++ = '\\';
-                        strcpy(c, file_name);
-                    }
-                    update_location_string();
-                }
+                current_dir = new_dir;
             }
         }
     }
@@ -318,7 +278,7 @@ void shell_execute()
         printf("\n");
         if (argc == 0 || argv[0][0] == '\0')
         {
-            printf(current_dir_str);
+            printf(current_dir.path);
             printf("\n");
         }
         else
@@ -366,8 +326,23 @@ void shell_execute()
             free(file_ptr);
         }
     }
+    else if (!strcasecmp(curr_cmd, "ren"))
+    {
+        // Rename file
+        printf("\n");
+        if (argc <= 1)
+            printf("Usage: ren <filename> <filename> (%u args passed)\n", argc);
+        else
+        {
+            if (rename(argv[0], argv[1]) == 0)
+                printf("Successfully renamed '%s' to '%s'\n", argv[0], argv[1]);
+            else
+                printf("Could not rename '%s' to '%s'\n", argv[0], argv[1]);
+        }
+    }
     else if (!strcasecmp(curr_cmd, "tskmgr"))
     {
+        // Task manager - shows currently running tasks
         dump_tasks();
     }
     else if (!strcasecmp(curr_cmd, "reboot"))

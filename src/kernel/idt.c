@@ -1,9 +1,9 @@
 #include "idt.h"
-#include "stdio.h"
+#include <stdio.h>
 #include "kernel.h"
 #include "x86.h"
 #include "gcc-attributes.h"
-#include "keyboard.h"
+#include "drivers/keyboard.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>

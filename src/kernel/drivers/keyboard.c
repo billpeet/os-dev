@@ -1,10 +1,10 @@
 #include "keyboard.h"
-#include "types.h"
-#include "x86.h"
-#include "console.h"
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
+#include "types.h"
+#include "../x86.h"
+#include "../console.h"
 
 static bool shift;
 static bool ctrl;

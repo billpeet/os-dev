@@ -1,5 +1,5 @@
 #include "boot_info.h"
-#include "stdio.h"
+#include <stdio.h>
 
 size_t kernel_start;
 size_t kernel_end;

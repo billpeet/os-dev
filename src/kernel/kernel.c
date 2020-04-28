@@ -1,24 +1,24 @@
 #include "kernel.h"
 #include <stdarg.h>
 #include <stdlib.h>
-#include "vga.h"
+#include <stdio.h>
+#include "drivers/vga.h"
+#include "drivers/ata.h"
+#include "drivers/keyboard.h"
+#include "system/pi.h"
+#include "system/tester.h"
 #include "stdio.h"
 #include "idt.h"
-#include "pong.h"
 #include "shell.h"
 #include "frame_allocator.h"
 #include "types.h"
 #include "boot_info.h"
 #include "alloc.h"
-#include "drivers/ata.h"
 #include "task.h"
 #include "x86.h"
-#include "pi.h"
 #include "paging.h"
 #include "serial.h"
 #include "console.h"
-#include "keyboard.h"
-#include "tester.h"
 #include "gdt.h"
 
 extern u16 code_selector;
@@ -92,6 +92,7 @@ static void sleeping_task()
 NORETURN void kmain(boot_info_t *boot_info)
 {
     vga_clearScreen();
+    init_stdio();
     printf("Welcome to PeetOS!\n");
 
     init_boot_info(boot_info);
@@ -104,7 +105,7 @@ NORETURN void kmain(boot_info_t *boot_info)
     init_tasking();
     init_console();
 
-    tester();
+    // tester();
 
     // dump_entry(&gdt64[0]);
     // dump_entry(&gdt64[1]);

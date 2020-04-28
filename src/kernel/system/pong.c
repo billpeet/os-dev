@@ -1,6 +1,7 @@
-#include "idt.h"
-#include "stdio.h"
-#include "x86.h"
+#include "pong.h"
+#include <stdio.h>
+#include "../idt.h"
+#include "../x86.h"
 
 int isRunning;
 

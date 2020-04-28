@@ -1,7 +1,7 @@
 #include "task.h"
 #include "paging.h"
-#include "stdio.h"
-#include "vga.h"
+#include <stdio.h>
+#include "drivers/vga.h"
 #include "x86.h"
 #include "kernel.h"
 #include "idt.h"

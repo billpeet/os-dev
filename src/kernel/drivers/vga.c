@@ -1,9 +1,9 @@
 #include "vga.h"
-#include "string.h"
-#include "types.h"
-#include "x86.h"
-#include "task.h"
 #include <stdarg.h>
+#include <string.h>
+#include <types.h>
+#include "../x86.h"
+#include "../task.h"
 
 #define VGA_MAX VGA_WIDTH *VGA_HEIGHT
 
@@ -16,8 +16,6 @@ static int lock_cnt = 0;
 
 static void lock_vga()
 {
-    // while (lock_cnt > 0)
-    //     yield();
     cli();
     lock_cnt++;
 }
