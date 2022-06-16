@@ -11,7 +11,7 @@
 #include "idt.h"
 #include "shell.h"
 #include "frame_allocator.h"
-#include "types.h"
+#include <stdint.h>
 #include "boot_info.h"
 #include "alloc.h"
 #include "task.h"
@@ -20,8 +20,11 @@
 #include "serial.h"
 #include "console.h"
 #include "gdt.h"
+#include "fat.h"
 
-extern u16 code_selector;
+extern uint16_t code_selector;
+
+uint64_t ticks;
 
 void panic(char const *error_message, ...)
 {
@@ -36,7 +39,7 @@ void panic(char const *error_message, ...)
 
 void reboot()
 {
-    u8 temp;
+    uint8_t temp;
 
     cli();
     do
@@ -105,6 +108,8 @@ NORETURN void kmain(boot_info_t *boot_info)
     init_tasking();
     init_console();
 
+    init_drive(0);
+
     // tester();
 
     // dump_entry(&gdt64[0]);
@@ -113,8 +118,8 @@ NORETURN void kmain(boot_info_t *boot_info)
 
     // init_ring3();
 
-    u64 flags = main_task.regs.flags;
-    u64 cr3 = main_task.regs.cr3;
+    uint64_t flags = main_task.regs.flags;
+    uint64_t cr3 = main_task.regs.cr3;
 
     // task_t task0 = create_task(other_main, flags, cr3);
     // schedule_task(task0);
@@ -130,6 +135,6 @@ NORETURN void kmain(boot_info_t *boot_info)
 
     task_t *shell_task = create_task(shell, flags, cr3);
 
-    printf("Running scheduler...\n");
+    // printf("Running scheduler...\n");
     schedule();
 }

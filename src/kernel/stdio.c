@@ -7,10 +7,11 @@
 #include <stdlib.h>
 #include "kernel.h"
 #include "drivers/keyboard.h"
-#include "types.h"
+#include <stdint.h>
 #include "serial.h"
 #include "task.h"
 #include "idt.h"
+#include "fat.h"
 
 #define HEXCHAR(c) c >= 10 ? c + 87 : c + 48
 #define WHITESPACE " \t\n\r\f\v"
@@ -181,7 +182,7 @@ int fputs(const char *str, FILE *stream)
     return i - 1;
 }
 
-int writeInt(u64 i, u8 base, FILE *stream)
+int writeInt(uint64_t i, uint8_t base, FILE *stream)
 {
     if (i < base)
     {
@@ -205,7 +206,7 @@ int writeInt(u64 i, u8 base, FILE *stream)
     }
 }
 
-int writeSInt(long i, u8 base, FILE *stream)
+int writeSInt(long i, uint8_t base, FILE *stream)
 {
     int cnt = 0;
     if (i < 0)
@@ -234,12 +235,12 @@ int vfprintf(FILE *stream, const char *fmt, va_list args)
             case 'u':
             case 'f':
                 // unsigned int
-                cnt += writeInt(va_arg(args, u64), 10, stream);
+                cnt += writeInt(va_arg(args, uint64_t), 10, stream);
                 break;
             case 'x':
             case 'X':
                 // hex
-                cnt += writeInt(va_arg(args, u64), 16, stream);
+                cnt += writeInt(va_arg(args, uint64_t), 16, stream);
                 break;
             case 'c':
                 // char
@@ -317,4 +318,17 @@ void perror(const char *str)
     fputs(str, stderr);
     fputs(": ", stderr);
     // print error message?
+}
+
+#define BUFFER_SIZE 100
+
+FILE *fopen(const char *filename, const char *mode)
+{
+    // get FAT
+    // read_directory(0, );
+}
+
+int fclose(FILE *file)
+{
+    return 0;
 }

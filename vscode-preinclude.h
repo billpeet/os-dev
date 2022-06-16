@@ -1,0 +1,1 @@
+#undef __STDC_HOSTED__

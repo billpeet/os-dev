@@ -32,6 +32,15 @@
         "float.h": "c",
         "cstring": "c",
         "console.h": "c",
-        "stdlib.h": "c"
-    }
+        "stdlib.h": "c",
+        "alloc.h": "c",
+        "stdint.h": "c",
+        "stdint-gcc.h": "c",
+        "kernel.h": "c",
+        "ata.h": "c",
+        "test_commands.h": "c",
+        "assert.h": "c",
+        "gdt.h": "c"
+    },
+    "C_Cpp.intelliSenseEngineFallback": "Disabled"
 }

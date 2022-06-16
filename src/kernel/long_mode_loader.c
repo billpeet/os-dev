@@ -1,4 +1,4 @@
-#include "types.h"
+#include <stdint.h>
 #include <string.h>
 
 void error(unsigned char error_code)

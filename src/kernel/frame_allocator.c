@@ -1,5 +1,5 @@
 #include "frame_allocator.h"
-#include "types.h"
+#include <stdint.h>
 #include <stdio.h>
 #include "boot_info.h"
 #include "kernel.h"
@@ -55,7 +55,7 @@ void *allocate_frame()
     if (next_free_frame > current_area_last_frame)
     {
         // We've gone off the end of the current area, choose a new area and try again
-        printf("Previous area full, grab new area\n");
+        // printf("Previous frame full, grab new area\n");
         next_area();
         return allocate_frame();
     }

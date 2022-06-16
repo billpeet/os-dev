@@ -2,40 +2,40 @@
 #define BOOT_INFO_H
 
 #include <stddef.h>
-#include "types.h"
+#include <stdint.h>
 
 struct boot_info
 {
-    u32 total_size;
-    u32 _reserved;
+    uint32_t total_size;
+    uint32_t _reserved;
 };
 
 struct boot_tag
 {
-    u32 type;
-    u32 size;
+    uint32_t type;
+    uint32_t size;
 };
 
 struct memory_map_entry
 {
-    u64 base_addr;
-    u64 length;
-    u32 type;
-    u32 reserved;
+    uint64_t base_addr;
+    uint64_t length;
+    uint32_t type;
+    uint32_t reserved;
 };
 
 struct elf_section_entry
 {
-    u32 name;
-    u32 type;
-    u64 flags;
-    u64 address;
-    u64 file_offset;
-    u64 size;
-    u32 link;
-    u32 info;
-    u64 addr_align;
-    u64 entry_size;
+    uint32_t name;
+    uint32_t type;
+    uint64_t flags;
+    uint64_t address;
+    uint64_t file_offset;
+    uint64_t size;
+    uint32_t link;
+    uint32_t info;
+    uint64_t addr_align;
+    uint64_t entry_size;
 };
 
 typedef struct boot_info boot_info_t;

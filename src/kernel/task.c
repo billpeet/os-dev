@@ -17,8 +17,8 @@ task_t tasks[MAX_TASKS];
 struct lock_table
 {
     void *locks[MAX_LOCKS];
-    u16 last_lock;
-    u16 lock_count;
+    uint16_t last_lock;
+    uint16_t lock_count;
 } locks;
 
 task_t *running_task;
@@ -43,7 +43,7 @@ void dump_tasks()
     }
 }
 
-void create_task_with_stack(task_t *task, void (*main)(), u64 flags, u64 cr3, u64 rbp, u64 rsp)
+void create_task_with_stack(task_t *task, void (*main)(), uint64_t flags, uint64_t cr3, uint64_t rbp, uint64_t rsp)
 {
     task->regs.rax = 0;
     task->regs.rbx = 0;
@@ -52,7 +52,7 @@ void create_task_with_stack(task_t *task, void (*main)(), u64 flags, u64 cr3, u6
     task->regs.rsi = 0;
     task->regs.rdi = 0;
     task->regs.flags = flags;
-    task->regs.rip = (u64)main;
+    task->regs.rip = (uint64_t)main;
     task->regs.cr3 = cr3;
     task->regs.rbp = rbp;
     task->regs.rsp = rsp;
@@ -60,11 +60,11 @@ void create_task_with_stack(task_t *task, void (*main)(), u64 flags, u64 cr3, u6
     task->state = RUNNABLE;
 }
 
-task_t *create_task(void (*main)(), u64 flags, u64 cr3)
+task_t *create_task(void (*main)(), uint64_t flags, uint64_t cr3)
 {
     task_t *task;
     size_t *stack;
-    for (u32 i = 0; i < MAX_TASKS; i++)
+    for (uint32_t i = 0; i < MAX_TASKS; i++)
     {
         if (tasks[i].state == SPARE)
         {
@@ -88,7 +88,7 @@ task_t *create_task(void (*main)(), u64 flags, u64 cr3)
 
     // Load initial address into stack
     *stack = (size_t)main;
-    create_task_with_stack(task, main, flags, cr3, (u64)stack, (u64)(stack));
+    create_task_with_stack(task, main, flags, cr3, (uint64_t)stack, (uint64_t)(stack));
     return task;
 }
 
@@ -170,7 +170,7 @@ NAKED void sleep()
 }
 
 // Mark running task was waiting for specified interrupt
-NAKED void wait_for_interrupt(u32 interrupt_id)
+NAKED void wait_for_interrupt(uint32_t interrupt_id)
 {
     save_task(running_task);
     if (running_task != &main_task)
@@ -190,7 +190,7 @@ void wake(task_t *task)
 }
 
 // Wakes all tasks waiting for specified interrupt
-void wake_interrupt(u32 interrupt_id)
+void wake_interrupt(uint32_t interrupt_id)
 {
     for (int i = 0; i < MAX_TASKS; i++)
     {
@@ -238,7 +238,7 @@ void schedule()
         {
             if (tasks[i].state == RUNNABLE)
             {
-                u64 ticks_before = ticks;
+                uint64_t ticks_before = ticks;
                 // printf("switching to %u\n", tasks[i].id);
                 switch_to(&tasks[i]);
                 tasks[i].time_spent += ticks - ticks_before;

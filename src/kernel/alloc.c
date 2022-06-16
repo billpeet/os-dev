@@ -1,7 +1,12 @@
+/*
+    alloc.c
+    Contains functions for allocation of kernel heap
+*/
+
 #include "alloc.h"
 #include "frame_allocator.h"
 #include "paging.h"
-#include "types.h"
+#include <stdint.h>
 #include <stdio.h>
 #include "kernel.h"
 #include <stddef.h>
@@ -28,7 +33,7 @@ void init_heap()
     for (int i = 1; i < HEAP_SIZE; i += PAGE_SIZE)
     {
         size_t phys_frame = (size_t)allocate_frame();
-        map_page(phys_frame, (u8 *)HEAP_START + i, 0b10);
+        map_page(phys_frame, (uint8_t *)HEAP_START + i, 0b10);
     }
     current = (void *)HEAP_START;
 }
@@ -41,7 +46,7 @@ void *malloc(size_t size)
         {
             heap_header_t *free_bit = free_head;
             free_head = free_bit->next;
-            return (u8 *)free_bit + sizeof(heap_header_t);
+            return (uint8_t *)free_bit + sizeof(heap_header_t);
         }
         else
         {
@@ -53,7 +58,7 @@ void *malloc(size_t size)
                 {
                     heap_header_t *free_bit = curr;
                     prev->next = curr->next;
-                    return (u8 *)free_bit + sizeof(heap_header_t);
+                    return (uint8_t *)free_bit + sizeof(heap_header_t);
                 }
                 prev = curr;
             }
@@ -62,10 +67,10 @@ void *malloc(size_t size)
 
     heap_header_t *header = (heap_header_t *)current;
     header->size = size;
-    current = (u8 *)header + sizeof(heap_header_t) + size;
+    current = (uint8_t *)header + sizeof(heap_header_t) + size;
     if ((size_t)current >= HEAP_END)
         panic("Heap allocation failed: heap is full!\n");
-    return (u8 *)header + sizeof(heap_header_t);
+    return (uint8_t *)header + sizeof(heap_header_t);
 }
 
 void *realloc(void *ptr, size_t size)

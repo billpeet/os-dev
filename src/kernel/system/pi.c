@@ -1,18 +1,18 @@
 #include "pi.h"
 #include <stdlib.h>
 #include <stdbool.h>
-#include <types.h>
+#include <stdint.h>
 #include <stdio.h>
 #include "../task.h"
 
-u64 sqrt(u64 n)
+uint64_t sqrt(uint64_t n)
 {
-    u64 bit = 1 << (sizeof(n) - 2);
+    uint64_t bit = 1 << (sizeof(n) - 2);
 
     while (bit > n)
         bit >> 2;
 
-    u64 res = 0;
+    uint64_t res = 0;
     while (bit > 0)
     {
         if (n > res + bit)
@@ -27,9 +27,9 @@ u64 sqrt(u64 n)
     return res;
 }
 
-bool is_prime(u64 n)
+bool is_prime(uint64_t n)
 {
-    for (u64 c = 2; c <= n - 1; c++)
+    for (uint64_t c = 2; c <= n - 1; c++)
     {
         if (n % c == 0)
         {
@@ -41,10 +41,10 @@ bool is_prime(u64 n)
 
 void get_primes()
 {
-    u64 prime_count = 0;
-    u64 last_prime = 0;
+    uint64_t prime_count = 0;
+    uint64_t last_prime = 0;
 
-    for (u64 curr = 3; curr < 1000000; curr++)
+    for (uint64_t curr = 3; curr < 1000000; curr++)
     {
         if (is_prime(curr))
         {

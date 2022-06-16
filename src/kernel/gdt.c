@@ -7,7 +7,7 @@ tss_entry_t tss_entry;
 
 void dump_entry(gdt_entry_t *entry)
 {
-    u32 base, limit;
+    uint32_t base, limit;
     base = entry->base_high << 24 | entry->base_low;
     limit = entry->limit_high << 16 | entry->limit_low;
     printf("base: 0x%x, limit 0x%x\n", base, limit);

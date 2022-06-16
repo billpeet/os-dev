@@ -1,13 +1,13 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
-#include "types.h"
+#include <stdint.h>
 #include "gcc-attributes.h"
 
 void reboot(void);
 
 NORETURN void panic(char const *error_message, ...);
 
-u64 ticks;
+extern uint64_t ticks;
 
 #endif

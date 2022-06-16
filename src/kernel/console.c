@@ -1,5 +1,5 @@
 #include "console.h"
-#include "types.h"
+#include <stdint.h>
 #include <stdio.h>
 #include "x86.h"
 #include "drivers/vga.h"

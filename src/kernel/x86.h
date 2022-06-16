@@ -1,5 +1,5 @@
 #include <stddef.h>
-#include "types.h"
+#include <stdint.h>
 #include "task.h"
 #include "gcc-attributes.h"
 
@@ -24,12 +24,12 @@ ALWAYS_INLINE static inline void save_task(task_t *task)
 }
 
 // Loads IDT
-ALWAYS_INLINE static inline void lidt(void *idt, u16 size)
+ALWAYS_INLINE static inline void lidt(void *idt, uint16_t size)
 {
-    volatile u16 idtr[3] ALIGNED(16);
+    volatile uint16_t idtr[3] ALIGNED(16);
     idtr[0] = size - 1;
-    idtr[1] = (u16)(size_t)idt;
-    idtr[2] = (u16)((size_t)idt >> 16);
+    idtr[1] = (uint16_t)(size_t)idt;
+    idtr[2] = (uint16_t)((size_t)idt >> 16);
     asm volatile("lidt (%0)" ::"r"(idtr));
 }
 
@@ -57,9 +57,9 @@ ALWAYS_INLINE static inline void hlt()
 }
 
 // Gets byte from CPU port
-static inline u8 inb(u16 port)
+static inline uint8_t inb(uint16_t port)
 {
-    u8 data;
+    uint8_t data;
     asm volatile("in %1, %0"
                  : "=a"(data)
                  : "d"(port));
@@ -67,9 +67,9 @@ static inline u8 inb(u16 port)
 }
 
 // Gets word from CPU port
-static inline u16 inw(u16 port)
+static inline uint16_t inw(uint16_t port)
 {
-    u16 data;
+    uint16_t data;
     asm volatile("in %1, %0"
                  : "=a"(data)
                  : "d"(port));
@@ -87,13 +87,13 @@ static inline void insl(int port, void *addr, int cnt)
 }
 
 // Writes byte to CPU port
-static inline void outb(u16 port, u8 data)
+static inline void outb(uint16_t port, uint8_t data)
 {
     asm volatile("out %0, %1" ::"a"(data), "d"(port));
 }
 
 // Writes word to CPU port
-static inline void outw(u16 port, u16 data)
+static inline void outw(uint16_t port, uint16_t data)
 {
     asm volatile("out %0, %1" ::"a"(data), "d"(port));
 }
@@ -108,9 +108,9 @@ static inline void outsl(int port, const void *addr, int cnt)
         : "cc");
 }
 
-static inline u8 cpl()
+static inline uint8_t cpl()
 {
-    u8 cpl;
+    uint8_t cpl;
     asm volatile(
         "mov %%cs, %%ax\n\t"
         "and 3, %%ax\n\t"

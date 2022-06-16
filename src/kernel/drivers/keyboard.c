@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
-#include "types.h"
 #include "../x86.h"
 #include "../console.h"
 
@@ -12,11 +11,11 @@ static bool caps;
 
 char keyboard_get()
 {
-    u16 status = inb(KEYBOARD_STATUS_PORT);
+    uint16_t status = inb(KEYBOARD_STATUS_PORT);
     if (status & 0x01)
     {
 
-        u8 keycode = inb(KEYBOARD_DATA_PORT);
+        uint8_t keycode = inb(KEYBOARD_DATA_PORT);
 
         if (keycode < 0)
             return 0;

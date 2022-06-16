@@ -1,7 +1,7 @@
 #ifndef STDIO_H
 #define STDIO_H
 
-#include <types.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <stddef.h>
 
@@ -40,10 +40,10 @@ extern FILE stds[3];
 #define stdin &stds[1]
 #define stdout &stds[2]
 
-typedef u64 fpos_t;
+typedef uint64_t fpos_t;
 
 // Closes stream. All buffers are flushed.
-// extern int fclose(FILE *stream);
+extern int fclose(FILE *stream);
 
 // Clears the end-of-file and error indicators of stream
 // extern void clearerr(FILE *stream);
@@ -61,7 +61,7 @@ typedef u64 fpos_t;
 // extern int fgetpos(FILE *stream, fpos_t *pos);
 
 // Opens the file name pointed to by filename using the given mode
-// extern FILE *fopen(const char *filename, const char *mode);
+extern FILE *fopen(const char *filename, const char *mode);
 
 // Reads data from the given stream into the array pointed to by ptr.
 // extern size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);

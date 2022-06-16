@@ -2,7 +2,7 @@
 #define IDT_H
 
 #include <stddef.h>
-#include "types.h"
+#include <stdint.h>
 #include "task.h"
 
 #define TIMER_HANDLER_ID 32

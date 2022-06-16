@@ -12,7 +12,7 @@ void flush_tlb()
 
 page_table_t *level_4_table()
 {
-    u64 cr3;
+    uint64_t cr3;
     asm volatile(
         "mov %%cr3, %%rax\n\t"
         "mov %%rax, %0\n\t"
@@ -22,7 +22,7 @@ page_table_t *level_4_table()
     return (page_table_t *)cr3;
 }
 
-void *get_page_table_entry(page_table_t *page_table, size_t id, size_t *addr, u8 *flags)
+void *get_page_table_entry(page_table_t *page_table, size_t id, size_t *addr, uint8_t *flags)
 {
     size_t entry = page_table->entries[id];
     *addr = (entry >> 8) << 8;
@@ -98,7 +98,7 @@ size_t get_physaddr(void *virt_addr)
     page_table_t *p2 = get_page_table(p3, p3_index);
 
     size_t addr;
-    u8 flags;
+    uint8_t flags;
     get_page_table_entry(p2, p2_index, &addr, &flags);
     if (!(flags & 0b1))
         panic("Page entry not present!\n");
@@ -118,12 +118,12 @@ size_t get_physaddr(void *virt_addr)
     return addr + offset;
 }
 
-void identity_map(void *virt_addr, u8 flags)
+void identity_map(void *virt_addr, uint8_t flags)
 {
     map_page((size_t)virt_addr, virt_addr, flags);
 }
 
-void map_page(size_t phys_addr, void *virt_addr, u8 flags)
+void map_page(size_t phys_addr, void *virt_addr, uint8_t flags)
 {
     size_t p4_index;
     size_t p3_index;

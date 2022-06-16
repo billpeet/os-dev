@@ -1,7 +1,7 @@
 #ifndef ATA_H
 #define ATA_H
 
-#include "types.h"
+#include <stdint.h>
 
 #define SECTOR_SIZE 512
 
@@ -54,11 +54,11 @@
 
 typedef struct lba_sector
 {
-    u8 bytes[SECTOR_SIZE];
+    uint8_t bytes[SECTOR_SIZE];
 } lba_sector_t;
 
 void ata_init(void);
-void read_sectors_ata(u8 drive_num, u32 sector_number, u8 sector_count, lba_sector_t *dest);
-void write_sectors_ata(u8 drive_num, u32 sector_number, u8 sector_count, lba_sector_t *dest);
+void read_sectors_ata(uint8_t drive_num, uint32_t sector_number, uint8_t sector_count, lba_sector_t *dest);
+void write_sectors_ata(uint8_t drive_num, uint32_t sector_number, uint8_t sector_count, lba_sector_t *dest);
 
 #endif

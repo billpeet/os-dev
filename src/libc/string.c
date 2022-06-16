@@ -1,6 +1,6 @@
 #include <string.h>
 #include <ctype.h>
-#include <types.h>
+#include <stdint.h>
 #include <stddef.h>
 
 // Searches for first occurrance of c in the first n bytes of str

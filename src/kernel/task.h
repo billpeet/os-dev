@@ -17,20 +17,20 @@ typedef enum taskstate_e
     WAITING
 } taskstate;
 
-#include "types.h"
+#include <stdint.h>
 
 typedef struct registers
 {
-    u64 rax, rbx, rcx, rdx, rsi, rdi, rsp, rbp, rip, flags, cr3;
+    uint64_t rax, rbx, rcx, rdx, rsi, rdi, rsp, rbp, rip, flags, cr3;
 } registers_t;
 
 typedef struct task
 {
     registers_t regs;
     taskstate state;
-    u32 interrupt_id;
-    u32 id;
-    u64 time_spent;
+    uint32_t interrupt_id;
+    uint32_t id;
+    uint64_t time_spent;
     void (*atexit)(void);
 } task_t;
 
@@ -40,14 +40,14 @@ extern void dump_tasks();
 
 extern void display_current_task();
 
-extern task_t *create_task(void (*main)(), u64 flags, u64 cr3);
+extern task_t *create_task(void (*main)(), uint64_t flags, uint64_t cr3);
 
 extern void lock(void *);
 extern void release(void *);
 extern void sleep();
-extern void wait_for_interrupt(u32 interrupt_id);
+extern void wait_for_interrupt(uint32_t interrupt_id);
 extern void wake(task_t *task);
-extern void wake_interrupt(u32 interrupt_id);
+extern void wake_interrupt(uint32_t interrupt_id);
 extern void yield();
 extern void switch_task(registers_t *next);
 

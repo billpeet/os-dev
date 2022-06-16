@@ -1,7 +1,6 @@
 #include "vga.h"
 #include <stdarg.h>
 #include <string.h>
-#include <types.h>
 #include "../x86.h"
 #include "../task.h"
 

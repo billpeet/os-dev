@@ -1,3 +1,4 @@
+; 64-bit entry point
 global long_mode_start
 global switch_task
 
@@ -6,6 +7,7 @@ section .text
 extern kmain
 extern code_selector
 
+; First 64-bit code on boot - clears out registers and jumps to kernel C code
 long_mode_start:            ; start of long mode
     mov ax, 0               ; zero out registers
     mov ss, ax
@@ -16,6 +18,7 @@ long_mode_start:            ; start of long mode
     jmp kmain               ; jump to kmain in kernel.c
     ret
 
+; Task switching
 switch_task:
     ; push rbx
     ; push rsi

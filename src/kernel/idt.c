@@ -16,20 +16,20 @@
 
 struct idt_pointer
 {
-    u16 limit;
-    u64 base;
+    uint16_t limit;
+    uint64_t base;
 } PACKED;
 
 extern void *code_selector;
 
 typedef struct IDT_entry
 {
-    u16 offset_lowerbits;
-    u16 selector;
-    u16 options;
-    u16 offset_middlebits;
-    u32 offset_higherbits;
-    u32 reserved;
+    uint16_t offset_lowerbits;
+    uint16_t selector;
+    uint16_t options;
+    uint16_t offset_middlebits;
+    uint32_t offset_higherbits;
+    uint32_t reserved;
 } PACKED IDT_entry_t;
 
 IDT_entry_t idt[IDT_SIZE] ALIGNED(4);
@@ -89,7 +89,7 @@ INTERRUPT void keyboard_handler(interrupt_frame_t *frame)
 
 INTERRUPT void breakpoint_handler(interrupt_frame_t *frame)
 {
-    u64 rax;
+    uint64_t rax;
     asm volatile("mov %%rcx, %0"
                  : "=r"(rax)::"rcx");
     printf("Breakpoint! rcx: 0x%x\n", rax);
@@ -104,7 +104,7 @@ INTERRUPT void page_fault_handler(interrupt_frame_t *frame, unsigned long long e
 {
     printf("Page fault!\n");
     printf("IP: 0x%x, SP: 0x%x\n", frame->rip);
-    u64 cr2;
+    uint64_t cr2;
     asm volatile("mov %%cr2, %0"
                  : "=r"(cr2));
     if (error_code & 0b10)
@@ -129,7 +129,7 @@ NORETURN INTERRUPT void general_protection_fault_handler(interrupt_frame_t *fram
 
 int register_kbhandler(int_handler_t handler)
 {
-    for (u32 i = 0; i < 100; i++)
+    for (uint32_t i = 0; i < 100; i++)
     {
         if (kb_handlers[i].handler == NULL)
         {
@@ -142,7 +142,7 @@ int register_kbhandler(int_handler_t handler)
 
 void unregister_kbhandler(int_handler_t handler)
 {
-    for (u32 i = 0; i < 100; i++)
+    for (uint32_t i = 0; i < 100; i++)
     {
         if (kb_handlers[i].handler == handler.handler && kb_handlers[i].task == handler.task)
         {
@@ -155,7 +155,7 @@ void unregister_kbhandler(int_handler_t handler)
 
 int register_tmhandler(int_handler_t handler)
 {
-    for (u32 i = 0; i < 100; i++)
+    for (uint32_t i = 0; i < 100; i++)
     {
         if (tm_handlers[i].handler == NULL)
         {
@@ -168,7 +168,7 @@ int register_tmhandler(int_handler_t handler)
 
 void unregister_tmhandler(int_handler_t handler)
 {
-    for (u32 i = 0; i < 100; i++)
+    for (uint32_t i = 0; i < 100; i++)
     {
         if (tm_handlers[i].handler == handler.handler && tm_handlers[i].task == handler.task)
         {
@@ -179,9 +179,9 @@ void unregister_tmhandler(int_handler_t handler)
     }
 }
 
-void setup_idt_entry(struct IDT_entry *entry, size_t handler_address, u16 options)
+void setup_idt_entry(struct IDT_entry *entry, size_t handler_address, uint16_t options)
 {
-    entry->offset_lowerbits = (u16)handler_address;
+    entry->offset_lowerbits = (uint16_t)handler_address;
     entry->selector = 8;
     entry->options = options;
     entry->offset_middlebits = handler_address >> 16;
@@ -193,8 +193,8 @@ void init_interrupts()
 {
     init_pic();
 
-    u16 options_present = 0b1000111000000000; // Present bit set (15)
-    u16 options_trap = 0b1000111100000000;    // Present bit (15) and trap bit (8) set
+    uint16_t options_present = 0b1000111000000000; // Present bit set (15)
+    uint16_t options_trap = 0b1000111100000000;    // Present bit (15) and trap bit (8) set
 
     setup_idt_entry(&idt[3], (size_t)breakpoint_handler, options_trap);                    // Breakpoint exception
     setup_idt_entry(&idt[8], (size_t)double_fault_handler, options_present);               // Double fault exception

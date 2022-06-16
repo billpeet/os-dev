@@ -14,10 +14,10 @@ LIBCOBJ=$(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(LIBCFILES))
 all: os.iso fat.img
 
 debug: all
-	qemu-system-x86_64 -cdrom os.iso -hda fat.img -boot d -s -S
+	qemu-system-x86_64 -cdrom os.iso -drive file=fat.img,format=raw -boot d -s -S
 
 run: all
-	qemu-system-x86_64 -cdrom os.iso -hda fat.img -boot d
+	qemu-system-x86_64 -cdrom os.iso -drive file=fat.img,format=raw -boot d
 
 clean:
 	rm -rf $(OBJDIR) isofiles/boot/kernel.bin os.iso

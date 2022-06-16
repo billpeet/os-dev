@@ -1,7 +1,7 @@
 #ifndef FRAME_ALLOCATOR_H
 #define FRAME_ALLOCATOR_H
 
-#include "types.h"
+#include <stdint.h>
 
 #define PAGE_SIZE 4096
 

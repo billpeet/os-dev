@@ -15,12 +15,12 @@ void init_serial(void)
     outb(PORT + 4, 0x0b); // IRQs enabled, RTS/DSR set
 }
 
-u8 serial_received()
+uint8_t serial_received()
 {
     return inb(PORT + 5) & 0b1;
 }
 
-u8 read_serial()
+uint8_t read_serial()
 {
     while (serial_received() == 0)
         yield();
@@ -28,12 +28,12 @@ u8 read_serial()
     return inb(PORT);
 }
 
-u8 transmit_empty()
+uint8_t transmit_empty()
 {
     return inb(PORT + 5) & 0x20;
 }
 
-void write_serial(u8 data)
+void write_serial(uint8_t data)
 {
     while (transmit_empty() == 0)
         yield();

@@ -6,7 +6,7 @@
 
 int lba_delay()
 {
-    for (u8 i = 0; i < 5; i++)
+    for (uint8_t i = 0; i < 5; i++)
         inb(0x1f7);
 }
 
@@ -20,7 +20,7 @@ int lba_wait()
     return 0;
 }
 
-u16 get_port(u8 drive_num)
+uint16_t get_port(uint8_t drive_num)
 {
     switch (drive_num)
     {
@@ -46,20 +46,20 @@ u16 get_port(u8 drive_num)
 }
 
 // 24-bit LBA
-void read_sectors_ata(u8 drive_num, u32 sector_number, u8 sector_count, lba_sector_t *dest)
+void read_sectors_ata(uint8_t drive_num, uint32_t sector_number, uint8_t sector_count, lba_sector_t *dest)
 {
-    u16 base = get_port(drive_num);
-    u8 drive = 0x40;
+    uint16_t base = get_port(drive_num);
+    uint8_t drive = 0x40;
     if (drive_num % 2)
         // Slave
         drive |= 0x10;
 
     outb(base + ATA_REG_FEA, 0x00);
     outb(base + ATA_SEC_CNT, sector_count);
-    outb(base + ATA_REG_LOW, (u8)(sector_number));
-    outb(base + ATA_REG_MID, (u8)(sector_number >> 8));
-    outb(base + ATA_REG_HI, (u8)(sector_number >> 16));
-    outb(base + ATA_REG_DRV, ((u8)(sector_number >> 24)) | drive);
+    outb(base + ATA_REG_LOW, (uint8_t)(sector_number));
+    outb(base + ATA_REG_MID, (uint8_t)(sector_number >> 8));
+    outb(base + ATA_REG_HI, (uint8_t)(sector_number >> 16));
+    outb(base + ATA_REG_DRV, ((uint8_t)(sector_number >> 24)) | drive);
     outb(base + ATA_REG_CMD, ATA_CMD_READ_PIO);
 
     // TODO: replace with IRQ
@@ -69,18 +69,18 @@ void read_sectors_ata(u8 drive_num, u32 sector_number, u8 sector_count, lba_sect
     insl(base, dest, sector_count * SECTOR_SIZE);
 }
 
-void write_sectors_ata(u8 drive_num, u32 sector_number, u8 sector_count, lba_sector_t *dest)
+void write_sectors_ata(uint8_t drive_num, uint32_t sector_number, uint8_t sector_count, lba_sector_t *dest)
 {
-    u16 base = get_port(drive_num);
-    u8 drive = 0x40;
+    uint16_t base = get_port(drive_num);
+    uint8_t drive = 0x40;
     if (drive_num % 2)
         drive |= 0x10;
 
     outb(base + ATA_REG_FEA, 0x00);
     outb(base + ATA_SEC_CNT, sector_count);
-    outb(base + ATA_REG_LOW, (u8)(sector_number));
-    outb(base + ATA_REG_MID, (u8)(sector_number >> 8));
-    outb(base + ATA_REG_HI, (u8)(sector_number >> 16));
+    outb(base + ATA_REG_LOW, (uint8_t)(sector_number));
+    outb(base + ATA_REG_MID, (uint8_t)(sector_number >> 8));
+    outb(base + ATA_REG_HI, (uint8_t)(sector_number >> 16));
     outb(base + ATA_REG_DRV, ((sector_number >> 24) & 0x0F) | drive);
     outb(base + ATA_REG_CMD, ATA_CMD_WRITE_PIO);
 
@@ -88,7 +88,7 @@ void write_sectors_ata(u8 drive_num, u32 sector_number, u8 sector_count, lba_sec
     lba_delay();
     lba_wait();
 
-    u16 *buffer = (u16 *)dest;
-    for (u32 i = 0; i < sector_count * SECTOR_SIZE / 2; i++)
+    uint16_t *buffer = (uint16_t *)dest;
+    for (uint32_t i = 0; i < sector_count * SECTOR_SIZE / 2; i++)
         outw(base, buffer[i]);
 }

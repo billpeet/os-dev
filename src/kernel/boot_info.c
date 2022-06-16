@@ -1,3 +1,8 @@
+/*
+    boot_info.c
+    Dumps boot debug info
+*/
+
 #include "boot_info.h"
 #include <stdio.h>
 
@@ -30,7 +35,7 @@ void init_boot_info(boot_info_t *boot_info)
         if (tag->type == 6)
         {
             // Memory map
-            u8 *ptr = (u8 *)tag;
+            uint8_t *ptr = (uint8_t *)tag;
             ptr += 8; // Jump over tag header
             ptr += 8; // Jump over entry_size and entry_version
             memory_map = (memory_map_entry_t *)ptr;
@@ -48,7 +53,7 @@ void init_boot_info(boot_info_t *boot_info)
         {
             // ELF symbols
             // printf("ELF symbol - size: %u\n", tag->size);
-            u32 *ptr = (u32 *)(tag + 1);
+            uint32_t *ptr = (uint32_t *)(tag + 1);
             ptr += 3;
             elf_section_entry_t *entry = (elf_section_entry_t *)ptr;
             // printf("Kernel sections: \n");
@@ -75,6 +80,6 @@ void init_boot_info(boot_info_t *boot_info)
             multiboot_end = (size_t)boot_info + boot_info->total_size;
         }
 
-        tag = (boot_tag_t *)((u8 *)tag + ((tag->size + 7) & ~7));
+        tag = (boot_tag_t *)((uint8_t *)tag + ((tag->size + 7) & ~7));
     }
 }

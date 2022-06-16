@@ -1,6 +1,8 @@
 ; 32-bit entry point
 ; Sets up initial GDT and page tables
 bits 32                     ; nasm directive - 32 bit
+
+; multiboot header
 section .multiboot_header
 header_start:
     ;multiboot spec
@@ -22,10 +24,12 @@ global gdt64
 extern long_mode_start
 extern error
 
+; run through basic checks
 check_multiboot:                            ; Checks if was loaded by a Multiboot compliant bootloader
     cmp eax, 0x36d76289                     ; Check that magic number 0x36d76289 is loaded into eax
     jne .no_multiboot
     ret
+
 .no_multiboot:
     mov eax, 1
     push eax
@@ -56,7 +60,7 @@ check_cpuid:                                ; Checks that CPUID is supported by 
     push eax
     call error
 
-check_long_mode:                            ; Check if long mode is available
+check_long_mode:                            ; Check if 64-bit mode is available
     ; Check if extended processor info is available
     mov eax, 0x80000000
     cpuid                                   ; Returns highest supported argument
@@ -142,6 +146,8 @@ start:
     hlt                                     ; halt
 
 section .rodata
+
+; GDT
 gdt64:
     dq 0                                    ; initial blank entry
 code_selector: equ $ - gdt64
@@ -154,6 +160,8 @@ code_selector: equ $ - gdt64
     dq gdt64
 
 section .bss
+
+; paging table
 align 4096
 p4_table:
     resb 4096
@@ -161,6 +169,8 @@ p3_table:
     resb 4096
 p2_table:
     resb 4096
+
 stack_bottom:
+; kernel stack goes here
 resb 8192                                   ; 8KB for stack
 stack_top:

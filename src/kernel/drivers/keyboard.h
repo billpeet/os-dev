@@ -1,7 +1,7 @@
 #ifndef KEYBOARD_H
 #define KEYBOARD_H
 
-#include "types.h"
+#include <stdint.h>
 
 #define KEYBOARD_DATA_PORT 0x60
 #define KEYBOARD_STATUS_PORT 0x64
@@ -17,7 +17,7 @@
 #define CAPS_LOCK_PRESSED 0x3A
 #define CAPS_LOCK_RELEASED 0xBA
 
-static u8 keyboard_map[128] =
+static uint8_t keyboard_map[128] =
     {
         0, 27, '1', '2', '3', '4', '5', '6', '7', '8',    /* 9 */
         '9', '0', '-', '=', '\b',                         /* Backspace */

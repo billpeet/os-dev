@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <ctype.h>
-#include "types.h"
+#include <stdint.h>
 
 // Converts string to double
 double strtod(const char *str, char **endptr);
