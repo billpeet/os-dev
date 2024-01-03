@@ -72,26 +72,27 @@ void shell_execute()
     }
     else if (!strcasecmp(curr_cmd, "cd"))
     {
-        // putchar('\n');
-        // if (argc == 0 || argv[0][0] == '\0')
-        // {
-        //     printf(current_dir.path);
-        //     printf("\n");
-        // }
-        // else
-        // {
-        //     char *dir_name = argv[0];
-        //     fat32_directory_t new_dir;
-        //     if (load_sub_directory(&current_dir, dir_name, &new_dir) != 0)
-        //         printf("Invalid directory '%s'\n", dir_name);
-        //     else
-        //     {
-        //         // Success - free old directory
-        //         if (strcmp(current_dir.path, new_dir.path) != 0 && strlen(current_dir.path) > 3)
-        //             free(current_dir.entries);
-        //         current_dir = new_dir;
-        //     }
-        // }
+        putchar('\n');
+        if (argc == 0 || argv[0][0] == '\0')
+        {
+            printf(current_dir.path);
+            printf("\n");
+        }
+        else
+        {
+            char *dir_name = argv[0];
+            uint32_t *fat = (uint32_t *)NULL;
+            fat32_entry_t *entry = malloc(sizeof(fat32_entry_t));
+            if (load_entry(&current_dir, fat, dir_name, entry) < 0)
+            {
+                printf("directory not found\n");
+            }
+            else
+            {
+                read_directory(current_dir.drive_number, get_cluster_number(entry), dir_name, &current_dir);
+            }
+            free(entry);
+        }
     }
     else if (!strcasecmp(curr_cmd, "cat"))
     {

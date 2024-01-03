@@ -327,54 +327,6 @@ fat32_entry_t *find_entry(fat32_directory_t *current_dir, const char *entry_name
     return NULL;
 }
 
-// int load_sub_directory(fat32_directory_t *current_dir, char *subdir_name, fat32_directory_t *dest)
-// {
-//     if (current_dir == NULL)
-//     {
-//         read_directory(0, 0, "/", current_dir);
-//     }
-
-//     if (strcmp(subdir_name, ".") == 0)
-//     {
-//         // Just copy directory across - caller needs to make sure they check before freeing current_dir's entries!
-//         *dest = *current_dir;
-//         return 0;
-//     }
-
-//     int slash_pos = (int)(strchr(subdir_name, "/") - subdir_name);
-//     if (slash_pos > 0)
-//     {
-//         char new_str[slash_pos + 1];
-//         memcpy(new_str, subdir_name, slash_pos);
-//         return load_sub_directory(current_dir, new_str, dest);
-//     }
-
-//     fat32_entry_t *entry = find_sub_directory(current_dir, subdir_name);
-//     if (entry == NULL)
-//         return -1;
-//     uint32_t cluster_number = get_cluster_number(entry);
-
-//     char path[100];
-//     strcpy(path, current_dir->path);
-//     if (subdir_name[0] == '.')
-//     {
-//         // current dir '.' or parent dir '..'
-//         path[strlen(path) - 1] = '\0'; // Remove last slash
-//         char *tmp = strrchr(path, '/');
-//         tmp++;
-//         *tmp = '\0';
-//     }
-//     else
-//     {
-//         // subdir name - add subdir and '\' to the end of the path
-//         strcat(path, subdir_name);
-//         strcat(path, "/");
-//     }
-
-//     read_directory(current_dir->drive_number, cluster_number, path, dest);
-//     return 0;
-// }
-
 int load_entry(fat32_directory_t *dir, uint32_t *fat, char *path, fat32_entry_t *entry)
 {
     if (dir == NULL)

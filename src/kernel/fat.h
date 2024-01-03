@@ -82,8 +82,6 @@ void dump_directory_unix(fat32_directory_t *dir);
 
 int load_entry(fat32_directory_t *dir, uint32_t *fat, char *path, fat32_entry_t *entry);
 
-int load_sub_directory(fat32_directory_t *current_dir, char *subdir_name, fat32_directory_t *dest);
-
 int read_file(fat32_entry_t *entry, uint32_t *fat, uint8_t drive_number, void *buffer, uint32_t bytes_to_read);
 
 uint32_t create_file(fat32_directory_t *dir, char *name, char *ext, uint32_t file_size, uint8_t flags);
