@@ -1,15 +1,16 @@
 ; 32-bit entry point
 ; Sets up initial GDT and page tables
-bits 32                     ; nasm directive - 32 bit
+bits 32                                     ; nasm directive - 32 bit
 
 ; multiboot header
 section .multiboot_header
 header_start:
     ;multiboot spec
-    dd 0xe85250d6           ; magic number
-    dd 0x00                 ; flags
-    dd header_end - header_start ; header length
-    dd 0x100000000 - (0xe85250d6 + header_end - header_start); checksum - magic + flags + c should be 0
+    dd 0xe85250d6                           ; magic number
+    dd 0x00                                 ; flags
+    dd header_end - header_start            ; header length
+    dd 0x100000000 - \
+    (0xe85250d6 + header_end - header_start); checksum - magic + flags + c should be 0
 
     dw 0
     dw 0

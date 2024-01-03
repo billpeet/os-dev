@@ -55,7 +55,7 @@ char dequeue()
     char c = char_queue.chars[char_queue.front++];
     if (--char_queue.cnt == 0)
     {
-        //Reset position to start of array
+        // Reset position to start of array
         char_queue.front = 0;
         char_queue.rear = 0;
     }

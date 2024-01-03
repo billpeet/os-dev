@@ -4,7 +4,7 @@
 #include "../x86.h"
 #include "../task.h"
 
-#define VGA_MAX VGA_WIDTH *VGA_HEIGHT
+#define VGA_MAX VGA_WIDTH * VGA_HEIGHT
 
 char virt_vga[VGA_MAX * 2];
 char *vidptr = (char *)0xb8000;
